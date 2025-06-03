@@ -11,32 +11,37 @@ int factorial(int n) {
   return n * factorial(n-1);
 }
 
-double phylogenees_num(int n) {
+long phylogenees_num(int n) {
 
-  std::vector<double> previous{0,1,0.5};
+  std::vector<double> previous{0.0,1.0,0.5};
 
+  //iterate up until the number we want
   for (int i = previous.size(); i <= n; i++) {
-    double sum = 0;
-    for(int k = 2; k <= n-1; k++) {
-      sum += previous[k] * previous[n-k+1]*(n-k+1);
+    //calculates sum
+    double sum = 0.0;
+    for(int k = 2; k <= i-2; k++) {
+      sum += previous[k] * previous[i-k]*(i-k);
     }
 
-    int bn = (n+2.0)/(n+1.0)*previous[n] + (2.0/(n+1))*sum;
-
+    //finds nth term
+    double bn = ((i+1.0)/i)*previous[i-1] + (2.0/(i))*sum;
+    
+    //adds term to end of array
     previous.push_back(bn);
   }
 
-  return factorial(n) * previous[n];
+  // calculates A000311 from b_n
+  return std::ceil(factorial(n) * previous[n]);
 }
 
 
 int main(void) {
 
-  int n = 5;
+  int n = 11;
 
   printf("n: %d\n", n);
 
-  for (int i = 0; i < n; i++) {
-    printf("%d: %f\n", i, phylogenees_num(i));
+  for (int i = 0; i <= n; i++) {
+    printf("%d: %\n", i, phylogenees_num(i));
   }
 }
