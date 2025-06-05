@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <map>
 
 int factorial(int n) {
   if (n == 0) {
@@ -34,6 +35,47 @@ long phylogenees_num(int n) {
   return std::ceil(factorial(n) * previous[n]);
 }
 
+struct Tree {
+  std::vector<int*> branches;
+  std::map<int*, int> degrees;
+};
+
+void make_chains(int label_set[], int label_set_size, Tree curr, Tree arr[]) {
+
+  if (label_set_size == 1) return;
+  else if (label_set_size == 2) {
+    curr.branches.push_back(label_set);
+    curr.degrees.insert({label_set, 2});
+    return;
+  }
+
+  //TODO: partition label_set
+  std::vector<std::vector<int[]>> partitions{};
+
+  for (auto lambda : partitions) {
+    //filter for only proper partitions
+    if (lambda.size() >= 2) {
+      //TODO: deep copy temp;
+      Tree temp = curr;
+
+      curr.branches.push_back(label_set);
+      curr.degrees.insert({label_set, lambda.size()});
+
+      for (auto block : lambda) {
+        //size of blocks
+        size_t len = sizeof(block)/sizeof(block[0]);
+        //if block is a branch
+        if (len >= 2) {
+          make_chains(block, len, curr, arr);
+        }
+      }
+      //TODO: save current
+      curr = temp;
+    }
+  }
+
+}
+
 
 int main(void) {
 
@@ -42,6 +84,6 @@ int main(void) {
   printf("n: %d\n", n);
 
   for (int i = 0; i <= n; i++) {
-    printf("%d: %\n", i, phylogenees_num(i));
+    printf("%d: %d\n", i, phylogenees_num(i));
   }
 }
