@@ -75,6 +75,22 @@ void make_chains(int label_set[], int label_set_size, Tree curr, Tree arr[]) {
   }
 
 }
+void _printb(unsigned int num) {
+  if(!num) return;
+
+  _printb(num>>1);
+  std::cout << ((num&1) ? '1' : '0');
+}
+
+void printb(unsigned int num, const char* pre = "") {
+  std::cout << pre;
+  if (!num) {
+    std::cout << '0' << std::endl;
+  } else {
+    _printb(num);
+    std::cout << std::endl;
+  }
+}
 
 
 int main(void) {
