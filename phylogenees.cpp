@@ -36,44 +36,79 @@ long phylogenees_num(int n) {
 }
 
 struct Tree {
-  std::vector<int*> branches;
-  std::map<int*, int> degrees;
+  std::vector<int> branches;
+  //std::map<int*, int> degrees;
 };
 
-void make_chains(int label_set[], int label_set_size, Tree curr, Tree arr[]) {
-
-  if (label_set_size == 1) return;
-  else if (label_set_size == 2) {
-    curr.branches.push_back(label_set);
-    curr.degrees.insert({label_set, 2});
-    return;
-  }
-
-  //TODO: partition label_set
-  std::vector<std::vector<int[]>> partitions{};
-
-  for (auto lambda : partitions) {
-    //filter for only proper partitions
-    if (lambda.size() >= 2) {
-      //TODO: deep copy temp;
-      Tree temp = curr;
-
-      curr.branches.push_back(label_set);
-      curr.degrees.insert({label_set, lambda.size()});
-
-      for (auto block : lambda) {
-        //size of blocks
-        size_t len = sizeof(block)/sizeof(block[0]);
-        //if block is a branch
-        if (len >= 2) {
-          make_chains(block, len, curr, arr);
-        }
-      }
-      //TODO: save current
-      curr = temp;
+// Function to count the number of 1s in an integers binary form
+int bit_length(unsigned int val){
+    int count = 0;
+    while (val){
+        val&= (val-1);
+        count++;
     }
-  }
+    return count;
+}
 
+
+void make_chains(int I) {
+  Tree fork;
+  int I_max = (std::bit_ceil(I) >> 1);
+  fork.branches.push_back(I);
+  
+// The case where there is only a singleton left when we combine the last element and all of its buddies.
+for (int j = 1; j < I - I_max; j <<=1){ //Move through all the singletons
+  Tree temp = fork; 
+  int chain_size_0 = bit_length(I) - 2; //Size of new standard array
+  for (auto fork0 : Stdchain(chain_size_0)){
+
+    // Shifts the branches
+    std::vector<int> shifted_branches_0 {};
+            for (auto block : fork0.branches){
+              shifted_branches_0.push_back(translate_block(I - I_max - j, block));
+            }
+  
+    fork.branches.insert(fork.branches.end(), shifted_branches_0.begin(), shifted_branches_0.end());
+  }
+  fork = temp;
+}
+
+
+
+
+//The main case where the buddies of the last element have <|I|-1 elements
+      for (int J = 0; J < (I >> 1); J++){ 
+          int chain_size_1  = bit_length(J) + 1; //Grab number of bits in J and add it to the number of bits in I_max
+
+          for (auto fork1 : Stdchain(chain_size_1)){ //Move through all trees of the designated size
+            
+            //shifts branches for the first of the nested calls.
+            std::vector<int> shifted_branches {};
+            for (auto block : fork1.branches){
+              shifted_branches.push_back(translate_block(J + I_max, block));
+            }
+
+            fork.branches.insert(fork.branches.end(), shifted_branches.begin(), shifted_branches.end()); //Current Tree inherits all branches
+
+            int chain_size_2 = bit_length(I - I_max - J); //Grab size for the rest of the partition;
+            for (auto fork2: Stdchain(chain_size_2)){ //Look at other side of the partition
+                
+              //shifts branches for the second of the nested calls.
+                std::vector<int> shifted_branches_2 {};
+                for (auto block2 : fork2.branches){
+                  shifted_branches_2.push_back(translate_block(I-I_max-J, block2));
+                }
+                // Two choices
+                fork.branches.insert(fork.branches.end(), shifted_branches_2.begin(), shifted_branches_2.end()); //Current Tree inherits all branches
+                //OR 
+                auto ne = std::remove(shifted_branches_2.begin(), shifted_branches_2.end(), I - I_max - J); //Remove the 'top' branch
+                shifted_branches_2.erase(ne, shifted_branches_2.end());
+                fork.branches.insert(fork.branches.end(),shifted_branches_2.begin(), shifted_branches_2.end()); //Current tree inherits the branchs
+  
+            }
+          }
+      }
+  return;
 }
 void _printb(unsigned int num) {
   if(!num) return;
