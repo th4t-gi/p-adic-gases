@@ -51,7 +51,7 @@ int bit_length(unsigned int val){
 }
 
 
-void make_chains(int I) {
+void make_chains(unsigned int I) {
   Tree fork;
   int I_max = (std::bit_ceil(I) >> 1);
   fork.branches.push_back(I);
@@ -69,8 +69,9 @@ for (int j = 1; j < I - I_max; j <<=1){ //Move through all the singletons
             }
   
     fork.branches.insert(fork.branches.end(), shifted_branches_0.begin(), shifted_branches_0.end());
+    //Save fork to db. NEED TO COMPLETE
+     fork = temp;
   }
-  fork = temp;
 }
 
 
@@ -98,13 +99,15 @@ for (int j = 1; j < I - I_max; j <<=1){ //Move through all the singletons
                 for (auto block2 : fork2.branches){
                   shifted_branches_2.push_back(translate_block(I-I_max-J, block2));
                 }
-                // Two choices
+                Tree temp = fork;
                 fork.branches.insert(fork.branches.end(), shifted_branches_2.begin(), shifted_branches_2.end()); //Current Tree inherits all branches
-                //OR 
+                // save fork to db NEED TO DO
+                fork = temp; 
                 auto ne = std::remove(shifted_branches_2.begin(), shifted_branches_2.end(), I - I_max - J); //Remove the 'top' branch
                 shifted_branches_2.erase(ne, shifted_branches_2.end());
                 fork.branches.insert(fork.branches.end(),shifted_branches_2.begin(), shifted_branches_2.end()); //Current tree inherits the branchs
-  
+                // save fork to db NEED TO DO
+                fork = temp;
             }
           }
       }
