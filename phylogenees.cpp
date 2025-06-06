@@ -93,13 +93,51 @@ void printb(unsigned int num, const char* pre = "") {
 }
 
 
+unsigned translate_block(unsigned target, unsigned x) {
+  //complement of target can be understood as a list of when to shift x and when not to;
+  unsigned tc = (std::bit_ceil(target) - 1) ^ target;
+
+  //iterate over bits in tc
+  while (tc) {
+    //calculate least set bit in tc;
+    unsigned bit = tc & -tc;
+    // calculate remainder of x at current bit
+    unsigned r = (bit-1) & x;
+    //shift and take remainder away (equivalent to ((x - r) << 1) + r.)
+    x = (x << 1) - r;
+    tc -= bit;
+  }
+
+  return x;
+}
+
+
+
 int main(void) {
 
-  int n = 11;
+  unsigned int n = 5;
+  // unsigned source = 7;
+  unsigned target = 13;
 
-  printf("n: %d\n", n);
+  std::cout << "What number do you want to target?" << std::endl;
+  std::cin >> target;
 
-  for (int i = 0; i <= n; i++) {
-    printf("%d: %d\n", i, phylogenees_num(i));
+  unsigned source = std::pow(2, __builtin_popcount(target)) - 1;
+
+  char res;
+  std::cout << "target has size " << __builtin_popcount(target) << std::endl;
+  // std::cin >> res;
+
+  for(unsigned int i = 0; i < source; i++) {
+    // translate_block(target, i);
+    printf("T(%u) = %u\n", i, translate_block(target, i));
+    // printf("----\n");
   }
+
+  printf("done.\n");
+
+
+  // for (int i = 0; i <= n; i++) {
+  //   printf("%d: %d\n", i, phylogenees_num(i));
+  // }
 }
