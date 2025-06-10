@@ -7,7 +7,30 @@ typedef unsigned int code;
 void make_chains(sqlpp::sqlite3::connection& db, unsigned int N) {
 
   //TODO: case if N is 0;
-  assert(N >= 1);
+  if (N <= 2) {
+    switch (N) {
+      case 0:{
+        Tree empty{std::vector<unsigned int>{}, 0};
+        trees::insert_tree(db, empty);
+        break;
+      }
+      
+      case 1: {
+        Tree one{std::vector<unsigned int>{}, 1};
+        trees::insert_tree(db, one);
+        break;
+      }
+      
+      case 2: {
+        Tree two{std::vector<unsigned int>{3}, 2};
+        trees::insert_tree(db, two);
+        break;
+      }
+
+      default:
+        break;
+    }
+  }
 
   code set_1toN = (1 << N) - 1;
   code elt_N = (1 << (N-1));
