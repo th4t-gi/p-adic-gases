@@ -93,6 +93,7 @@ namespace trees {
     json branchesArr = t.branches;
     json degreesArr = std::vector<int>{};
     
+    try {
     auto insert_stmt = db.prepare(insert_into(trees).set(
       trees.setSize = parameter(trees.setSize),
       trees.branches = parameter(trees.branches),
@@ -101,6 +102,12 @@ namespace trees {
 
     insert_stmt.params.setSize = t.setSize;
     insert_stmt.params.branches = branchesArr.dump();
+
+      db(insert_stmt);
+    } catch (const std::exception& e) {
+      std::cerr << e.what() << std::endl;
+      return 1;
+    }
 
     return 0;
   }
