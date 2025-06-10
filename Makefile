@@ -1,6 +1,6 @@
 CC = clang++
 INCLUDES = -lsqlite3
-FLAGS = -std=c++20 $(INCLUDES)
+FLAGS = -std=c++20 -g $(INCLUDES)
 
 EXEC = translate partitions blocks phylogenees
 DEPS = utils.o api.o
