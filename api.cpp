@@ -3,23 +3,23 @@
 #include <sqlpp11/custom_query.h>
 #include <sqlpp11/select.h>
 
-int main(void) {
-  sqlpp::sqlite3::connection_config config;
-  config.path_to_database = "trees.db";
-  config.flags = SQLITE_OPEN_READWRITE;
+// int main(void) {
+//   sqlpp::sqlite3::connection_config config;
+//   config.path_to_database = "trees.db";
+//   config.flags = SQLITE_OPEN_READWRITE;
 
 
-  trees::Blocks table;
-  connection db(config);
+//   trees::Blocks table;
+//   connection db(config);
 
-  auto query = sqlpp::custom_query("SELECT * FROM trees WHERE id = 1;").with_result_type_of(select(sqlpp::value("").as(table.setStr)));
+//   // auto query = sqlpp::custom_query("SELECT * FROM trees WHERE id = 1;").with_result_type_of(select(sqlpp::value("").as(table.setStr)));
 
-  for (const auto& row : db(query)) {
-      std::cout << row.setStr << std::endl; // prints: {"a":1,"b":2}
-  }
+//   // for (const auto& row : db(query)) {
+//   //     std::cout << row.setStr << std::endl; // prints: {"a":1,"b":2}
+//   // }
 
 
-}
+// }
 
 // create table
 template <std::size_t T>
@@ -69,12 +69,22 @@ namespace trees {
     return 0;
   }
 
-  auto get_trees(connection& db, int setSize) {
+  std::vector<Tree> get_trees(connection& db, int setSize) {
     trees::Trees trees;
     auto select_stmt = db.prepare(select(all_of(trees)).from(trees).where(trees.setSize == parameter(trees.setSize)));
 
     select_stmt.params.setSize = setSize;
-    return db(select_stmt);
+
+    std::vector<Tree> out;
+    json j;
+    for (auto& row : db(select_stmt)) {
+      std::vector<unsigned int> branches = json::parse(row.branches.text).get<std::vector<unsigned int>>();
+      
+      Tree new_tree(branches, row.setSize.value());
+
+      out.push_back(new_tree);
+    }
+    return out;
   }
 
   int insert_tree(connection& db, Tree& t) {

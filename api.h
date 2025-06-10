@@ -17,7 +17,7 @@ namespace trees {
   auto get_block(connection& db, int id);
   int insert_block(connection& db, int id, std::string setStr, int size);
 
-  auto get_trees(connection& db, int setSize);
-  int insert_tree(connection& db, int* branches, int* degrees, int setSize);
+  std::vector<Tree> get_trees(connection& db, int setSize);
+  int insert_tree(connection& db, Tree& t);
 
 }

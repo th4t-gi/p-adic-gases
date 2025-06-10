@@ -1,19 +1,8 @@
 #include "utils.h"
 
+typedef unsigned int code;
 
-struct Tree {
-  std::vector<int> branches;
-  // std::map<int*, int> degrees;
 
-  Tree() {
-
-  }
-
-  double probability() {
-
-    return 0;
-  }
-};
 
 /* ################### Counting functions ################
  * int factorial(n) [A000142] 1 1 2 6 24 120
