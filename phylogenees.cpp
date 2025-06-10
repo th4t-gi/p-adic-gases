@@ -30,6 +30,7 @@ void make_chains(sqlpp::sqlite3::connection& db, unsigned int N) {
       default:
         break;
     }
+    return;
   }
 
   code set_1toN = (1 << N) - 1;
@@ -37,15 +38,16 @@ void make_chains(sqlpp::sqlite3::connection& db, unsigned int N) {
 
   Tree base_fork;
   base_fork.branches.push_back(set_1toN);
+  base_fork.setSize = N;
   
-  Tree curr_fork = base_fork;
 
   // The case where there is only a singleton left when we combine the last
   // element and all of its buddies.
   for (int j = 1; j < N; j++) {
+    Tree curr_fork = base_fork;
     // Move through all the singletons
     //make labelset {1, 2, ... ,j-1, j+1, ... N}
-    unsigned target = (1 << N) - (1 << j);
+    unsigned target = (1 << N) - (1 << (j-1)) - 1; // Target is not working the correct way this may be a fix?
     // Gets trees for {1,2,...N-1}
     for (Tree fork0 :/*\in*/ trees::get_trees(db, N-1)) {
       // Shifts the branches
@@ -62,6 +64,7 @@ void make_chains(sqlpp::sqlite3::connection& db, unsigned int N) {
 
   // The main case where the buddies of the last element is the set of J
   for (code J = 0; J < elt_N; J++) {
+    Tree curr_fork = base_fork;
     // Grab number of bits in J and add it to the number of bits in N_max
     int chain_size_1 = bit_length(J) + 1;
     code target_1 = J + elt_N;
