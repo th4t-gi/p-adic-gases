@@ -1,8 +1,11 @@
-*
-
 !*.cpp
+!*.h
+
 !.gitignore
 !Makefile
 # !trees.db
-!*.h
 !sqlite2cpp.py
+!.vscode
+!.vscode/**
+
+*
