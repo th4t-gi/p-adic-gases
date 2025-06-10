@@ -3,3 +3,6 @@
 !*.cpp
 !.gitignore
 !Makefile
+# !trees.db
+!*.h
+!sqlite2cpp.py
