@@ -1,13 +1,20 @@
 CC = clang++
-FLAGS = -std=c++20
+INCLUDES = -lsqlite3
+FLAGS = -std=c++20 $(INCLUDES)
 
-all: partitions phylogenees
+EXEC = translate partitions blocks phylogenees
+DEPS = utils.o api.o
 
-partitions: partitions.cpp
-	$(CC) $(FLAGS) partitions.cpp -o partitions
+.PHONY: all clean
 
-phylogenees: phylogenees.cpp
-	$(CC) $(FLAGS) phylogenees.cpp -o phylogenees
+all: $(DEPS) $(EXEC)
+
+%.o: %.cpp
+	$(CC) $(FLAGS) -c $< -o $@
+
+# General rule for binaries
+$(EXEC): %: %.cpp $(DEPS)
+	$(CC) $(FLAGS) $^ -o $@
 
 clean:
-	rm -rf partitions phylogenees
+	rm -rf *.o $(EXEC)
