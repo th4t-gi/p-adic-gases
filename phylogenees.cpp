@@ -15,13 +15,13 @@ void make_chains(sqlpp::sqlite3::connection& db, unsigned int N) {
       // }
       
       case 1: {
-        Tree one{std::vector<unsigned int>{}, 1};
+        Tree one{std::vector<unsigned int>{}, 1, std::vector<int>{}};
         trees::insert_tree(db, one);
         break;
       }
       
       case 2: {
-        Tree two{std::vector<unsigned int>{3}, 2};
+        Tree two{std::vector<unsigned int>{3}, 2, std::vector<int>{2}};
         trees::insert_tree(db, two);
         break;
     
@@ -66,10 +66,17 @@ void make_chains(sqlpp::sqlite3::connection& db, unsigned int N) {
         Tree dup_fork = curr_fork;
         //Saving the two possible trees to DB
         curr_fork.append(translated_fork_2, true);
+        if(translated_fork_2.degrees.size()){
+          curr_fork.degrees.insert(curr_fork.degrees.begin(), 1 + translated_fork_2.degrees.front());
+        }
+        else{
+           curr_fork.degrees.insert(curr_fork.degrees.begin(),2);
+        }
         trees::insert_tree(db, curr_fork);
 
         if (chain_size_2 > 1) {;
           dup_fork.append(translated_fork_2, false);
+          dup_fork.degrees.insert(dup_fork.degrees.begin(), 2);
           trees::insert_tree(db, dup_fork);
         }
 

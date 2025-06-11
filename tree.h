@@ -13,7 +13,7 @@ class Tree {
 
     Tree();
     Tree(std::vector<unsigned int> b, int size);
-
+    Tree(std::vector<unsigned int> b, int size, std::vector<int> d);
     double probability();
     void append(Tree& tree, bool exclude_top = false);
     void addDegrees(Tree& tree);

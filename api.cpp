@@ -79,8 +79,8 @@ namespace trees {
     json j;
     for (auto& row : db(select_stmt)) {
       std::vector<unsigned int> branches = json::parse(row.branches.text).get<std::vector<unsigned int>>();
-      
-      Tree new_tree(branches, row.setSize.value());
+      std::vector<int> degrees = json::parse(row.degrees.text).get<std::vector<int>>();
+      Tree new_tree(branches, row.setSize.value(), degrees);
 
       out.push_back(new_tree);
     }
@@ -89,19 +89,19 @@ namespace trees {
 
   int insert_tree(connection& db, Tree& t) {
     trees::Trees trees;
-
     json branchesArr = t.branches;
-    json degreesArr = std::vector<int>{};
+    json degreesArr = t.degrees;
     
     try {
     auto insert_stmt = db.prepare(insert_into(trees).set(
       trees.setSize = parameter(trees.setSize),
       trees.branches = parameter(trees.branches),
-      trees.degrees = ""
+      trees.degrees = parameter(trees.degrees)
     ));
 
     insert_stmt.params.setSize = t.setSize;
     insert_stmt.params.branches = branchesArr.dump();
+    insert_stmt.params.degrees = degreesArr.dump(); 
 
       db(insert_stmt);
     } catch (const std::exception& e) {
