@@ -25,37 +25,13 @@ int main(void) {
     return 0;
   }
 
-  std::vector<uint64_t> sourceArr;
-  sourceArr.reserve(std);
-  std::vector<uint64_t> targetArr;
-  targetArr.reserve(std);
-  for (int i = 0; i < std; i++) {
-    // printf("source: %d, i: %d\n", source, i);
-    // printf("target: %d, i: %d\n", target, i);
-
-    sourceArr[i] = translate_block_std(source, i);
-    printf("sourceArr[%d]: %d\n", i, sourceArr[i]);
-    targetArr[i] = translate_block_std(target, i);
-    printf("targetArr[%d]: %d\n", i, targetArr[i]);
-  }
+  printb(source, "source: ");
+  printb(target, "target: ");
 
   for (int i = 0; i < std; i++) {
-    // translate_block_std(target, i);
-    uint64_t x = sourceArr[i];
-    uint64_t y = targetArr[i];
+    uint64_t x = translate_block_std(source, i);
 
-    printf("T(%llu) = %llu\n", x, translate_block_std(target, i));
-    // printf("T^-1(%llu) = %llu\n", y, translate_block_inverse(target, y));
-    // printf("T(%llu) = %llu\n", translate_block_std(target, x), x);
-
-    // printf("T^-1(T(%llu)) = %llu\n",
-    //   x,
-    //   translate_block_inverse(translate_block_std(target, x), x)
-    // );
-    // printf("T(T^-1(%llu)) = %llu\n",
-    //   y,
-    //   translate_block_std(translate_block_inverse(target, y), y)
-    // );
+    printf("T(%llu) = %llu\n", x, translate_block(source, target, x));
   }
 
   printf("done.\n");
