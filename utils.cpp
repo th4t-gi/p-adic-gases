@@ -1,9 +1,5 @@
 #include "utils.h"
 
-typedef unsigned int code;
-
-
-
 /* ################### Counting functions ################
  * int factorial(n) [A000142] 1 1 2 6 24 120
  * int phylogenees_num(n) [A000311] 0 1 1 4 26 236 2752 ...
@@ -102,12 +98,12 @@ std::string binarySet(unsigned n, int width) {
     return result;
 }
 
-Tree translate_tree(unsigned int target, Tree& fork) {
-  Tree translated_fork;
-  translated_fork.setSize = fork.setSize;
-  // shifts branches for the first of the nested calls.
-  for (auto block : fork.branches) {
-    translated_fork.branches.push_back(translate_block_std(target, block));
-  }
-  return translated_fork;
-}
+// Tree translate_tree(unsigned int target, Tree& fork) {
+//   Tree translated_fork;
+//   translated_fork.setSize = fork.setSize;
+//   // shifts branches for the first of the nested calls.
+//   for (auto block : fork.branches) {
+//     translated_fork.branches.push_back(translate_block_std(target, block));
+//   }
+//   return translated_fork;
+// }

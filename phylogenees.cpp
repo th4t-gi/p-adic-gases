@@ -1,8 +1,7 @@
 #include <iostream>
 #include <map>
 #include "api.h"
-
-typedef unsigned int code;
+#include "tree.h"
 
 void make_chains(sqlpp::sqlite3::connection& db, unsigned int N) {
 
@@ -56,16 +55,16 @@ void make_chains(sqlpp::sqlite3::connection& db, unsigned int N) {
     for (Tree fork1 : trees::get_trees(db, chain_size_1)) {
 
       // shifts branches for the first of the nested calls.
-      Tree translated_fork = translate_tree(target_1, fork1);
-      curr_fork.append(translated_fork);
+      Tree translated_fork_1 = fork1.translate(target_1);
+      curr_fork.append(translated_fork_1);
 
       // Look at other side of the partition
       for (auto fork2 : trees::get_trees(db, chain_size_2)) {
         // shifts branches for the second of the nested calls.
-        Tree translated_fork = translate_tree(target_2, fork2);
+        Tree translated_fork_2 = fork2.translate(target_2);
         
         //Saving the two possible trees to DB
-        curr_fork.append(translated_fork, true);
+        curr_fork.append(translated_fork_2, true);
         trees::insert_tree(db, curr_fork);
 
         //TODO figure out better way to append

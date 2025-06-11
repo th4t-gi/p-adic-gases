@@ -1,0 +1,20 @@
+#pragma once
+#include <vector>
+#include <string>
+
+std::string binarySet(unsigned n, int width);
+
+class Tree {
+  public:
+    std::vector<unsigned int> branches;
+    int setSize;
+
+    Tree();
+    Tree(std::vector<unsigned int> b, int size);
+
+    double probability();
+    void append(Tree& tree, bool exclude_top = false);
+    Tree translate(unsigned int target);
+    std::string to_string();
+    std::string to_set_string();
+};

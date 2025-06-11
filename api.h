@@ -1,5 +1,8 @@
+#pragma once
+
 #include "db.h"
 #include "utils.h"
+#include "tree.h"
 #include <sqlpp11/sqlite3/connection.h>
 #include <json.hpp>
 #include <string>

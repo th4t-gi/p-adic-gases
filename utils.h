@@ -1,71 +1,8 @@
+#pragma once
 #include <vector>
 #include <iostream>
 
-std::string binarySet(unsigned n, int width);
-
-
-class Tree {
-  public: 
-    std::vector<unsigned int> branches;
-    int setSize;
-  // std::map<int*, int> degrees;
-
-  Tree() {
-    branches = std::vector<unsigned int>{};
-    setSize = 0;
-  }
-
-  Tree(std::vector<unsigned int> b, int size) {
-    branches = b;
-    setSize = size;
-  };
-
-  double probability() {
-
-    return 0;
-  }
-
-  // Tree translate(unsigned int target) {
-  //   Tree translated_fork;
-  //   translated_fork.setSize = setSize;
-  //   // shifts branches for the first of the nested calls.
-  //   for (auto block : branches) {
-  //     translated_fork.branches.push_back(translate_block_std(target, block));
-  //   }
-  //   return translated_fork;
-  // }
-
-  void append(Tree& tree, bool exclude_top = false) {
-    branches.insert(branches.end(), tree.branches.begin() + exclude_top, tree.branches.end());
-  }
-
-  std::string to_string() {
-    std::string result = "[";
-    bool comma = false;
-
-    for (auto branch : branches) {
-      if (comma) {
-        result += ",";
-      }
-      comma = true;
-      result += std::to_string(branch);
-    }
-    result += "]";
-    return result;
-  }
-
-  std::string to_set_string() {
-    std::string result = "[";
-    bool comma = false;
-    for (auto branch : branches) {
-      if (comma) result += ",";
-      comma = true;
-      result += binarySet(branch, setSize);
-    }
-
-    return result;
-  }
-};
+typedef unsigned int code;
 
 int factorial(int n);
 long phylogenees_num(int n);
@@ -73,7 +10,8 @@ int bit_length(unsigned int val);
 
 void printb(unsigned int num, const char *pre);
 
-Tree translate_tree(unsigned int target, Tree& fork);
+std::string binarySet(unsigned n, int width);
+
 
 constexpr uint64_t translate_block_std(uint64_t target, uint64_t x) {
   // complement of target can be understood as a list of when to shift x and
