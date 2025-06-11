@@ -3,7 +3,6 @@
 #include <vector>
 #include <string>
 #include <sqlpp11/sqlite3/connection.h>
-#include "trees.h"
 #include "api.h"
 
 int main() {
