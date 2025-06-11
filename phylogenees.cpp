@@ -63,14 +63,14 @@ void make_chains(sqlpp::sqlite3::connection& db, unsigned int N) {
         // shifts branches for the second of the nested calls.
         Tree translated_fork_2 = fork2.translate(target_2);
         
+        Tree dup_fork = curr_fork;
         //Saving the two possible trees to DB
         curr_fork.append(translated_fork_2, true);
         trees::insert_tree(db, curr_fork);
 
-        //TODO figure out better way to append
-        if (chain_size_2 > 1) {
-          curr_fork.branches.insert(curr_fork.branches.begin() + 1, target_2);
-          trees::insert_tree(db, curr_fork);
+        if (chain_size_2 > 1) {;
+          dup_fork.append(translated_fork_2, false);
+          trees::insert_tree(db, dup_fork);
         }
 
         //Reset the current fork inside the for loop
@@ -91,12 +91,12 @@ int main(void) {
   trees::Trees trees;
   sqlpp::sqlite3::connection db(config);
  
-  for (int i = 1; i <= 5; i++){
+  for (int i = 8; i <= 8; i++){
     make_chains(db, i);
-    
-    for (Tree t : trees::get_trees(db, i)) {
-      std::cout << t.to_set_string() << std::endl;
-    }
+
+    // for (Tree t : trees::get_trees(db, i)) {
+    //   std::cout << t.to_set_string() << std::endl;
+    // }
   }
 
   // for (int i = 0; i <= n; i++) {
