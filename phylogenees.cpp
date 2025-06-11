@@ -40,28 +40,37 @@ void make_chains(sqlpp::sqlite3::connection& db, unsigned int N) {
   base_fork.branches.push_back(set_1toN);
   base_fork.setSize = N;
   
+  //Insert the base fork
+  trees::insert_tree(db, base_fork);
 
   // The case where there is only a singleton left when we combine the last
   // element and all of its buddies.
-  for (int j = 1; j < N; j++) {
+
+    for (int j = 1; j <= N; j++) {
     Tree curr_fork = base_fork;
     // Move through all the singletons
     //make labelset {1, 2, ... ,j-1, j+1, ... N}
     unsigned target = (1 << N) - (1 << (j-1)) - 1; // Target is not working the correct way this may be a fix?
     // Gets trees for {1,2,...N-1}
-    for (Tree fork0 :/*\in*/ trees::get_trees(db, N-1)) {
+
+      for (Tree fork0 : trees::get_trees(db, N-1)) {
       // Shifts the branches
       std::vector<code> shifted_branches_0{};
       for (auto block : fork0.branches) {
+          
         shifted_branches_0.push_back(translate_block_std(target, block));
-      }
-
       curr_fork.branches.insert(curr_fork.branches.end(), shifted_branches_0.begin(), shifted_branches_0.end());
-      //Save fork to db. NEED TO COMPLETE
+         
+          //Saving to tree inside the for loop over fork0.branches instead of outside to avoid repetition
       trees::insert_tree(db, curr_fork);
+          //Resetting within the for loop to avoid unwanted repettion
+          curr_fork=base_fork;
+        }
     }
   }
 
+  //This case should not run when N is less that 3. 
+  if (N > 3){
   // The main case where the buddies of the last element is the set of J
   for (code J = 0; J < elt_N; J++) {
     Tree curr_fork = base_fork;
@@ -76,7 +85,35 @@ void make_chains(sqlpp::sqlite3::connection& db, unsigned int N) {
       std::vector<int> shifted_branches{};
       for (auto block : fork1.branches) {
         shifted_branches.push_back(translate_block_std(target_1, block));
+          // Current Tree inherits all branches
+          curr_fork.branches.insert(curr_fork.branches.end(), shifted_branches.begin(), shifted_branches.end());
+
+          // Grab size for the rest of the partition;
+          int chain_size_2 = N - chain_size_1;
+          code target_2 = set_1toN - target_1;
+          // Look at other side of the partition
+          for (auto fork2 : trees::get_trees(db, chain_size_2)) {
+            // shifts branches for the second of the nested calls.
+            std::vector<int> shifted_branches_2{};
+            for (auto block2 : fork2.branches) {
+              //Shifts a new set of branches for the second of the nested calls ,
+              shifted_branches_2.push_back(translate_block_std(target_2, block2));
+              // Current tree inherits each branch except for one 
+              curr_fork.branches.insert(curr_fork.branches.end(), shifted_branches_2.begin()+1, shifted_branches_2.end());
+
+                //Saving the two possible trees to DB
+                trees::insert_tree(db, curr_fork);
+                curr_fork.branches.push_back(target_2);
+                trees::insert_tree(db, curr_fork);
+
+                //Reset the current fork inside the for loop
+                curr_fork=base_fork;
+              }
+            }
+          }
       }
+    }
+  }
       // Current Tree inherits all branches
       curr_fork.branches.insert(curr_fork.branches.end(), shifted_branches.begin(), shifted_branches.end());
 
@@ -107,7 +144,7 @@ void make_chains(sqlpp::sqlite3::connection& db, unsigned int N) {
         trees::insert_tree(db, curr_fork);
       }
     }
-  }
+  }*/
   return;
 }
 
