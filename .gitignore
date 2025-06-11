@@ -1,3 +1,6 @@
+*
+
+#include all these:
 !*.cpp
 !*.h
 
@@ -8,4 +11,5 @@
 !.vscode
 !.vscode/**
 
-*
+# exclude all these:
+**/.DS_Store
