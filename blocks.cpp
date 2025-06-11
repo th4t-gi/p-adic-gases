@@ -6,21 +6,6 @@
 #include "trees.h"
 #include "api.h"
 
-std::string binarySet(unsigned n, int width) {
-    std::string result = "{";
-    bool comma = false;
-
-    for (int i = 0; i < width; ++i) {
-        if (n & (1 << i)) {
-            if (comma) result += ",";
-            result += std::to_string(i + 1);  // 1-based indexing
-            comma = true;
-        }
-    }
-    result += "}";
-    return result;
-}
-
 int main() {
     const unsigned int N = (1ULL << 12);
     const int width = 31 - std::countl_zero(N);//bitwise for log_2(n)

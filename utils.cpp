@@ -86,3 +86,28 @@ void printb(unsigned int num, const char *pre = "") {
     std::cout << std::endl;
   }
 }
+
+std::string binarySet(unsigned n, int width) {
+    std::string result = "{";
+    bool comma = false;
+
+    for (int i = 0; i < width; ++i) {
+        if (n & (1 << i)) {
+            if (comma) result += ",";
+            result += std::to_string(i + 1);  // 1-based indexing
+            comma = true;
+        }
+    }
+    result += "}";
+    return result;
+}
+
+Tree translate_tree(unsigned int target, Tree& fork) {
+  Tree translated_fork;
+  translated_fork.setSize = fork.setSize;
+  // shifts branches for the first of the nested calls.
+  for (auto block : fork.branches) {
+    translated_fork.branches.push_back(translate_block_std(target, block));
+  }
+  return translated_fork;
+}
