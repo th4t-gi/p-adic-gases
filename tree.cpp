@@ -7,7 +7,15 @@ Tree::Tree(std::vector<code> b, int size) : branches{b}, setSize{size}, degrees{
 Tree::Tree(std::vector<code> b, int size, std::vector<int> d)
     : branches{b}, setSize{size}, degrees{d} {}
 
-double Tree::probability() { return 0; }
+double Tree::probability(int p) { 
+  double prod = 1.0;
+  for (int i = 0; i < branches.size(); i++){
+    double x = falling_factorial(p, degrees[i]);
+    prod *= x /(pow(p, bit_length(branches[i])) - p);
+  }
+  return prod; 
+}
+
 
 Tree Tree::translate(code target) {
   Tree translated_fork;

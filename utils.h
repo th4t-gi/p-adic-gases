@@ -5,6 +5,7 @@
 typedef unsigned int code;
 
 int factorial(int n);
+double falling_factorial(int x, int k);
 long phylogenees_num(int n);
 int bit_length(unsigned int val);
 

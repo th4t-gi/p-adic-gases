@@ -15,7 +15,7 @@ class Tree {
   Tree();
   Tree(std::vector<code> b, int size);
   Tree(std::vector<code> b, int size, std::vector<int> d);
-  double probability();
+  double probability(int p);
   void append(Tree& tree, bool exclude_top = false);
   void addDegrees(Tree& tree);
   Tree translate(code target);

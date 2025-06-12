@@ -10,7 +10,7 @@ else
   CFLAGS = -std=c++20 -O2
 endif
 
-EXEC = translate blocks phylogenees test
+EXEC = translate blocks phylogenees prob_test
 DEPS = utils.o api.o tree.o
 
 .PHONY: all clean

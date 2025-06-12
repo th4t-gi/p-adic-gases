@@ -4,8 +4,10 @@
 #include "api.h"
 #include "tree.h"
 
-void make_chains(sqlpp::sqlite3::connection& db, code N) {
-  // base cases for 0, 1, 2
+void make_chains(sqlpp::sqlite3::connection& db, unsigned int N) {
+   double sum_of_prob = 0; 
+  int p = 2;
+  //base cases for 0, 1, 2
   if (N <= 2) {
     switch (N) {
         // case 0:{
@@ -69,11 +71,21 @@ void make_chains(sqlpp::sqlite3::connection& db, code N) {
         } else {
           curr_fork.degrees.insert(curr_fork.degrees.begin(), 2);
         }
+        //Probabilities
+        printf("The fork: %s\n", curr_fork.to_string().c_str());
+        printf("has probability %lf, with prime %d\n", curr_fork.probability(p), p);
+        sum_of_prob += curr_fork.probability(p);
         trees::insert_tree(db, curr_fork);
 
         if (chain_size_2 > 1) {
           dup_fork.append(translated_fork_2, false);
           dup_fork.degrees.insert(dup_fork.degrees.begin(), 2);
+
+          //Probabilities
+          printf("The fork: %s\n", dup_fork.to_string().c_str());
+          printf("has probability %lf, with prime %d\n", dup_fork.probability(p), p);
+          sum_of_prob += dup_fork.probability(p);
+
           trees::insert_tree(db, dup_fork);
         }
 
@@ -82,6 +94,7 @@ void make_chains(sqlpp::sqlite3::connection& db, code N) {
       }
     }
   }
+  printf("The sume of the probabilities is %lf\n", sum_of_prob);
   return;
 }
 
@@ -102,6 +115,7 @@ int reset(connection& db) {
 
 int main(void) {
   // intialize database connection
+  int sum_of_prob = 0;
   sqlpp::sqlite3::connection_config config;
   config.path_to_database = "trees.db";
   config.flags = SQLITE_OPEN_READWRITE;

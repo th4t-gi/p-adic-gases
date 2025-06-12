@@ -17,6 +17,15 @@ int factorial(int n) {
   return n * factorial(n - 1);
 }
 
+double falling_factorial (int x, int k){
+  double prod = 1.0;
+  for (int i = 0; i <= k-1; i++){
+    prod *= x-i;
+  }
+  return prod;
+}
+
+
 // TODO: Should we change this to the other formula?
 long phylogenees_num(int n) {
 
