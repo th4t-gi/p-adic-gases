@@ -101,35 +101,41 @@ int reset(connection& db) {
 }
 
 int main(void) {
+  // intialize database connection
   sqlpp::sqlite3::connection_config config;
   config.path_to_database = "trees.db";
   config.flags = SQLITE_OPEN_READWRITE;
 
   trees::Trees trees;
   sqlpp::sqlite3::connection db(config);
-  db.execute("PRAGMA busy_timeout = 5;");
-
-  int did_reset = !reset(db);
-
-  int max = trees::get_max_label_size(db);
+  db.execute("PRAGMA busy_timeout = 5000;");
 
   code N = question("what should N equal? ", 3);
 
-  if (max >= N && !did_reset) {
+  // calculate reset and quit if N is less than what we deleted
+  int did_reset = !reset(db);
+  int max = trees::get_max_label_size(db);
+
+  if (max >= N) {
     std::cout << "already generated trees up to N = " + std::to_string(N) + " (max = " + std::to_string(max) + ")"
               << std::endl;
     return 0;
   }
 
+  // more config (for printing and confirmation)
   char print = question("Do you want to print out the trees? (y/_n_) ", 'n');
   char ready = question("ready to run calculation? (_y_/n)", 'y');
   if (ready == 'n') {
     std::cout << "cancelling calculation" << std::endl;
     return 0;
   } else if (ready == 'y') {
+    // MAIN LOGIC
     std::cout << "Generating trees for all label sizes between " + std::to_string(max) + " and " + std::to_string(N) +
                    "..."
               << std::endl;
+
+    //Start the clock
+    auto start = std::chrono::steady_clock::now();
 
     for (int i = max + 1; i <= N; i++) {
       std::cout << "beginning make_chains(N = " + std::to_string(i) + ")" << std::endl;
@@ -141,6 +147,15 @@ int main(void) {
         }
       }
     }
+
+    auto end = std::chrono::steady_clock::now();
+    auto diff = end - start;
+
+    double duration = std::chrono::duration<double, std::milli>(diff).count() / 1000.0;
+
+    std::cout << duration << "s" << std::endl;
+
+    
   }
 
   // for (int i = 0; i <= n; i++) {
