@@ -5,9 +5,7 @@
 #include "tree.h"
 
 void make_chains(sqlpp::sqlite3::connection& db, unsigned int N, std::vector<Tree> local[]) {
-  
-
-  //base cases for 0, 1, 2
+  // base cases for 0, 1, 2
   if (N <= 2) {
     switch (N) {
         // case 0:{
@@ -51,10 +49,9 @@ void make_chains(sqlpp::sqlite3::connection& db, unsigned int N, std::vector<Tre
     // Grab size for the rest of the partition;
     int chain_size_2 = N - chain_size_1;
     code target_2 = set_1toN - target_1;
-    
 
     // Move through all trees with J (buddies) unioned with {N}
-    for (int it = 0; it < phylogenees_num(chain_size_1); it++ ) {
+    for (int it = 0; it < phylogenees_num(chain_size_1); it++) {
       Tree fork1 = local[chain_size_1][it];
       // shifts branches for the first of the nested calls.
       Tree translated_fork_1 = fork1.translate(target_1);
@@ -106,21 +103,22 @@ int reset(connection& db) {
 }
 
 int main(void) {
+  // intialize database connection
   sqlpp::sqlite3::connection_config config;
   config.path_to_database = "trees.db";
   config.flags = SQLITE_OPEN_READWRITE;
 
   trees::Trees trees;
   sqlpp::sqlite3::connection db(config);
-  db.execute("PRAGMA busy_timeout = 5;");
-
-  int did_reset = !reset(db);
-
-  int max = trees::get_max_label_size(db);
+  db.execute("PRAGMA busy_timeout = 5000;");
 
   code N = question("what should N equal? ", 3);
 
-  if (max >= N && !did_reset) {
+  // calculate reset and quit if N is less than what we deleted
+  int did_reset = !reset(db);
+  int max = trees::get_max_label_size(db);
+
+  if (max >= N) {
     std::cout << "already generated trees up to N = " + std::to_string(N) + " (max = " + std::to_string(max) + ")"
               << std::endl;
     return 0;
@@ -144,22 +142,37 @@ int main(void) {
     std::cout << "cancelling calculation" << std::endl;
     return 0;
   } else if (ready == 'y') {
+    // MAIN LOGIC
     std::cout << "Generating trees for all label sizes between " + std::to_string(max) + " and " + std::to_string(N) +
                    "..."
               << std::endl;
 
+    // Start the clock
+    auto start = std::chrono::steady_clock::now();
+
     for (int i = max + 1; i <= N; i++) {
       std::cout << "beginning make_chains(N = " + std::to_string(i) + ")" << std::endl;
       make_chains(db, i, tree_arr);
-     // std::vector<Tree> var = trees::get_trees(db, i);
-     // tree_arr[i] = *(new std::vector<Tree>(var));
+      // std::vector<Tree> var = trees::get_trees(db, i);
+      // tree_arr[i] = *(new std::vector<Tree>(var));
       if (print == 'y') {
         for (Tree t : trees::get_trees(db, i)) {
           std::cout << t.to_set_string() << std::endl;
         }
       }
     }
+
+    auto end = std::chrono::steady_clock::now();
+    auto diff = end - start;
+
+    double duration = std::chrono::duration<double, std::milli>(diff).count() / 1000.0;
+
+    std::cout << duration << "s" << std::endl;
   }
+
+  // for (int i = 0; i <= n; i++) {
+  //   printf("%d: %d\n", i, phylogenees_num(i));
+  // }
 
   return 0;
 }
