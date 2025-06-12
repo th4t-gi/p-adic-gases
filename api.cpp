@@ -2,6 +2,7 @@
 #include "tree.h"
 #include <sqlpp11/custom_query.h>
 #include <sqlpp11/select.h>
+#include <sqlpp11/remove.h>
 
 // int main(void) {
 //   sqlpp::sqlite3::connection_config config;
@@ -37,6 +38,29 @@ void create_table(connection& db, std::string name, std::array<std::string, T> c
 }
 
 namespace trees {
+
+void reset_trees(connection& db, int size) {
+  trees::Trees trees;
+  std::string name = trees::Trees::_alias_t::_literal;
+
+  db(sqlpp::remove_from(trees).where(trees.setSize > size));
+
+  int count = db(sqlpp::select(sqlpp::count(1)).from(trees).unconditionally()).front().count;
+
+  auto query =
+    sqlpp::verbatim("UPDATE SQLITE_SEQUENCE SET SEQ=" + std::to_string(count) + " WHERE NAME='" + name + "'");
+  db.execute(query);
+}
+
+int get_max_label_size(connection& db) {
+  trees::Trees trees;
+  auto result = db(select(max(trees.setSize)).from(trees).unconditionally());
+
+  if (!result.empty()) {
+    return result.front().max;
+  }
+  return 0;
+}
 
   auto get_block(connection& db, int id = 0) {
     trees::Blocks blocks;
@@ -78,7 +102,7 @@ namespace trees {
     std::vector<Tree> out;
     json j;
     for (auto& row : db(select_stmt)) {
-      std::vector<unsigned int> branches = json::parse(row.branches.text).get<std::vector<unsigned int>>();
+    std::vector<code> branches = json::parse(row.branches.text).get<std::vector<code>>();
       std::vector<int> degrees = json::parse(row.degrees.text).get<std::vector<int>>();
       Tree new_tree(branches, row.setSize.value(), degrees);
 

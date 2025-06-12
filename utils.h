@@ -1,6 +1,6 @@
 #pragma once
-#include <vector>
 #include <iostream>
+#include <vector>
 
 typedef unsigned int code;
 
@@ -8,10 +8,22 @@ int factorial(int n);
 long phylogenees_num(int n);
 int bit_length(unsigned int val);
 
-void printb(unsigned int num, const char *pre);
+void printb(unsigned int num, const char* pre);
 
 std::string binarySet(unsigned n, int width);
 
+template <typename T>
+T question(std::string str, T def) {
+  T input = def;
+  std::cout << str;
+  if (!(std::cin >> input)) {
+    // If input fails (e.g., user presses Enter or types invalid value)
+    std::cin.clear();
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    return def;
+  }
+  return input;
+}
 
 constexpr uint64_t translate_block_std(uint64_t target, uint64_t x) {
   // complement of target can be understood as a list of when to shift x and
@@ -33,7 +45,8 @@ constexpr uint64_t translate_block_std(uint64_t target, uint64_t x) {
 }
 
 constexpr uint64_t translate_block_inverse(uint64_t source, uint64_t x) {
-  // source compliment can be understood as a list of when to shift x to the right and when not to;
+  // source compliment can be understood as a list of when to shift x to the
+  // right and when not to;
   auto sc = (std::bit_ceil(source) - 1) ^ source;
 
   // iterate over bits in sc
@@ -44,7 +57,8 @@ constexpr uint64_t translate_block_inverse(uint64_t source, uint64_t x) {
     // calculate remainder of x at current bit
     auto r = (bit - 1) & x;
 
-    // take remainder away, shrink (>> 1), then add the remainder back. (i.e getting rid of 0s)
+    // take remainder away, shrink (>> 1), then add the remainder back. (i.e
+    // getting rid of 0s)
     x = ((x - r) >> 1) + r;
     sc -= bit;
   }

@@ -17,10 +17,12 @@ using connection = sqlpp::sqlite3::connection;
 
 namespace trees {
 
-  auto get_block(connection& db, int id);
-  int insert_block(connection& db, int id, std::string setStr, int size);
+auto get_block(connection& db, int id);
+int insert_block(connection& db, int id, std::string setStr, int size);
 
-  std::vector<Tree> get_trees(connection& db, int setSize);
-  int insert_tree(connection& db, Tree& t);
+void reset_trees(connection& db, int size = 0);
+std::vector<Tree> get_trees(connection& db, int setSize);
+int insert_tree(connection& db, Tree& t);
+int get_max_label_size(connection& db);
 
-}
+}  // namespace trees
