@@ -1,16 +1,17 @@
 #pragma once
 
-#include "db.h"
-#include "utils.h"
-#include "tree.h"
-#include <sqlpp11/sqlite3/connection.h>
-#include <json.hpp>
-#include <string>
-#include <sqlpp11/select.h>
+#include <sqlpp11/functions.h>
 #include <sqlpp11/insert.h>
 #include <sqlpp11/parameter.h>
-#include <sqlpp11/functions.h>
+#include <sqlpp11/select.h>
+#include <sqlpp11/sqlite3/connection.h>
 
+#include <json.hpp>
+#include <string>
+
+#include "db.h"
+#include "tree.h"
+#include "utils.h"
 
 using json = nlohmann::json;
 using connection = sqlpp::sqlite3::connection;

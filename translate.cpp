@@ -7,8 +7,8 @@
 
 int main(void) {
   unsigned int n = 5;
-  unsigned source = 7;
-  unsigned target = 7;
+  code source = 7;
+  code target = 7;
 
   std::cout << "What number do you want to source?" << std::endl;
   std::cin >> source;
@@ -18,8 +18,8 @@ int main(void) {
 
   // unsigned source = std::pow(2, __builtin_popcount(target)) - 1;
 
-  unsigned int sourceSize = __builtin_popcount(source);
-  unsigned int std = (1ULL << sourceSize) - 1;
+  int sourceSize = __builtin_popcount(source);
+  code std = (1ULL << sourceSize) - 1;
   if (sourceSize != __builtin_popcount(target)) {
     std::cout << "target and source have different size, can not translate"
               << std::endl;
@@ -34,6 +34,12 @@ int main(void) {
 
     printf("T(%llu) = %llu\n", x, translate_block(source, target, x));
   }
+
+  Tree in{std::vector<code>{3}, 2};
+
+  Tree out = in.translate(target);
+
+  std::cout << out.to_string() << std::endl;
 
   printf("done.\n");
 }

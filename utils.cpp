@@ -4,8 +4,8 @@
  * int factorial(n) [A000142] 1 1 2 6 24 120
  * int phylogenees_num(n) [A000311] 0 1 1 4 26 236 2752 ...
  * int bell_num(n) [A000110] 1 1 2 5 15 52 203 ...
- * fubini number [A000670] 
-*/
+ * fubini number [A000670]
+ */
 
 int factorial(int n) {
   if (n == 0) {
@@ -17,7 +17,7 @@ int factorial(int n) {
   return n * factorial(n - 1);
 }
 
-//TODO: Should we change this to the other formula?
+// TODO: Should we change this to the other formula?
 long phylogenees_num(int n) {
 
   std::vector<double> previous{0.0, 1.0, 0.5};
@@ -42,14 +42,13 @@ long phylogenees_num(int n) {
 }
 
 int bell_num(int n) {
-  //TODO:
+  // TODO:
   return 0;
 }
 
-
 /* ################### Bitwise operations ################
- * 
-*/
+ *
+ */
 
 // Function to count the number of 1s in an integers binary form
 int bit_length(unsigned int val) {
@@ -62,8 +61,8 @@ int bit_length(unsigned int val) {
 }
 
 /* ################### printing ################
- * 
-*/
+ *
+ */
 
 void _printb(unsigned int num) {
   if (!num)
@@ -84,26 +83,17 @@ void printb(unsigned int num, const char *pre = "") {
 }
 
 std::string binarySet(unsigned n, int width) {
-    std::string result = "{";
-    bool comma = false;
+  std::string result = "{";
+  bool comma = false;
 
-    for (int i = 0; i < width; ++i) {
-        if (n & (1 << i)) {
-            if (comma) result += ",";
-            result += std::to_string(i + 1);  // 1-based indexing
-            comma = true;
-        }
+  for (int i = 0; i < width; ++i) {
+    if (n & (1 << i)) {
+      if (comma)
+        result += ",";
+      result += std::to_string(i + 1); // 1-based indexing
+      comma = true;
     }
-    result += "}";
-    return result;
+  }
+  result += "}";
+  return result;
 }
-
-// Tree translate_tree(unsigned int target, Tree& fork) {
-//   Tree translated_fork;
-//   translated_fork.setSize = fork.setSize;
-//   // shifts branches for the first of the nested calls.
-//   for (auto block : fork.branches) {
-//     translated_fork.branches.push_back(translate_block_std(target, block));
-//   }
-//   return translated_fork;
-// }

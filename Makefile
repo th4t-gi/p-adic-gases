@@ -2,7 +2,7 @@ CC = clang++
 INCLUDES_FLAGS = -lsqlite3
 FLAGS = -std=c++20 -g
 
-EXEC = translate partitions blocks phylogenees
+EXEC = translate blocks phylogenees
 DEPS = utils.o api.o tree.o
 
 .PHONY: all clean
