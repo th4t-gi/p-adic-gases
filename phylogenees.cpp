@@ -4,8 +4,10 @@
 #include "api.h"
 #include "tree.h"
 
-void make_chains(sqlpp::sqlite3::connection& db, code N) {
-  // base cases for 0, 1, 2
+void make_chains(sqlpp::sqlite3::connection& db, unsigned int N, std::vector<Tree> local[]) {
+  
+
+  //base cases for 0, 1, 2
   if (N <= 2) {
     switch (N) {
         // case 0:{
@@ -49,15 +51,18 @@ void make_chains(sqlpp::sqlite3::connection& db, code N) {
     // Grab size for the rest of the partition;
     int chain_size_2 = N - chain_size_1;
     code target_2 = set_1toN - target_1;
+    
 
     // Move through all trees with J (buddies) unioned with {N}
-    for (Tree fork1 : trees::get_trees(db, chain_size_1)) {
+    for (int it = 0; it < phylogenees_num(chain_size_1); it++ ) {
+      Tree fork1 = local[chain_size_1][it];
       // shifts branches for the first of the nested calls.
       Tree translated_fork_1 = fork1.translate(target_1);
       curr_fork.append(translated_fork_1);
 
       // Look at other side of the partition
-      for (auto fork2 : trees::get_trees(db, chain_size_2)) {
+      for (int it2 = 0; it2 < phylogenees_num(chain_size_2); it2++) {
+        Tree fork2 = local[chain_size_2][it2];
         // shifts branches for the second of the nested calls.
         Tree translated_fork_2 = fork2.translate(target_2);
 
@@ -121,6 +126,18 @@ int main(void) {
     return 0;
   }
 
+  //Count trees up to N labels
+  int phylo_num_arr[N+1];
+  for(int j = 0; j <= N; j++){
+    phylo_num_arr[j] = phylogenees_num(j);
+  }
+
+  std::vector<Tree> tree_arr[N];
+  for(int k = 1; k <= max; k++){
+    std::vector<Tree> var = trees::get_trees(db, k);
+    tree_arr[k] = *(new std::vector<Tree>(var)); 
+  }
+
   char print = question("Do you want to print out the trees? (y/_n_) ", 'n');
   char ready = question("ready to run calculation? (_y_/n)", 'y');
   if (ready == 'n') {
@@ -133,8 +150,9 @@ int main(void) {
 
     for (int i = max + 1; i <= N; i++) {
       std::cout << "beginning make_chains(N = " + std::to_string(i) + ")" << std::endl;
-      make_chains(db, i);
-
+      make_chains(db, i, tree_arr);
+     // std::vector<Tree> var = trees::get_trees(db, i);
+     // tree_arr[i] = *(new std::vector<Tree>(var));
       if (print == 'y') {
         for (Tree t : trees::get_trees(db, i)) {
           std::cout << t.to_set_string() << std::endl;
@@ -142,10 +160,6 @@ int main(void) {
       }
     }
   }
-
-  // for (int i = 0; i <= n; i++) {
-  //   printf("%d: %d\n", i, phylogenees_num(i));
-  // }
 
   return 0;
 }
