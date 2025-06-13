@@ -4,6 +4,8 @@
 #include "api.h"
 #include "tree.h"
 
+#include <boost/program_options.hpp>
+
 void make_chains(sqlpp::sqlite3::connection& db, label_size_t N, std::vector<std::vector<Tree>>& local) {
   // base cases for 1, 2
   if (N <= 2) {
@@ -100,7 +102,7 @@ int reset(connection& db) {
   return 0;
 }
 
-int main(void) {
+int main(int argc, char** argv) {
   // intialize database connection
   sqlpp::sqlite3::connection_config config;
   config.path_to_database = "trees.db";
@@ -110,17 +112,51 @@ int main(void) {
   sqlpp::sqlite3::connection db(config);
   db.execute("PRAGMA busy_timeout = 5000;");
 
-  code_t N = question("what should N equal? ", 3);
+  code_t N;
+  std::string import_file;
+  std::string export_file;
+  namespace po = boost::program_options;
 
-  // calculate reset and quit if N is less than what we deleted
-  int did_reset = !reset(db);
-  int max = trees::get_max_label_size(db);
+  //Declaring the options
+    po::options_description desc("Allowed options");
+    desc.add_options()
+        ("help", "produce help message")
+        ("n-value", po::value<code_t>(&N)->required(), "Required number of particles")
+        ("reset", po::value<int>(),"Reset database to kth size")
+        ("print-trees","Do you want to print trees?")
+        ("import", po::value<std::string>(&import_file), "Imported database")
+        ("export", po::value<std::string>(&export_file), "Exported database")
+        ("verbose", "Do verbose or not")
+    ;
 
-  if (max >= N) {
-    std::cout << "already generated trees up to N = " + std::to_string(N) + " (max = " + std::to_string(max) + ")"
-              << std::endl;
-    return 0;
+  po::variables_map vm;
+  po::store(po::parse_command_line(argc, argv, desc), vm);
+  po::notify(vm);    
+
+  if (vm.count("help")) {
+      std::cout << desc << "\n";
+      return 1;
   }
+
+  if (vm.count("reset") && (N > vm["reset"].as<int>())) {
+      trees::reset_trees(db, vm["reset"].as<int>());
+  } else {
+      std::cout << "The database was not reset.\n";
+  }
+      
+  if (vm.count("import")) {
+      printf("You are importing from %s\n", import_file.c_str());
+  }
+
+  if (vm.count("export")) {
+      printf("You are exporting to %s\n", export_file.c_str());
+  }
+
+  if (vm.count("verbose")) {
+      printf("Do verbose\n");
+  }
+
+  int max = trees::get_max_label_size(db);
 
   std::vector<std::vector<Tree>> tree_arr;
   tree_arr.reserve(N);
@@ -132,9 +168,9 @@ int main(void) {
       tree_arr.push_back(std::vector<Tree>{});
     }
   }
-
-  char print = question("Do you want to print out the trees? (y/_n_) ", 'n');
+  
   char ready = question("ready to run calculation? (_y_/n)", 'y');
+
   if (ready == 'n') {
     std::cout << "cancelling calculation" << std::endl;
     return 0;
@@ -152,7 +188,7 @@ int main(void) {
       std::cout << "\tbeginning make_chains(N = " + std::to_string(i) + ")" << std::endl;
       make_chains(db, i, tree_arr);
 
-      if (print == 'y') {
+      if (vm.count("print-trees")) {
         std::cout << "[tree_arr] " << tree_arr[i - 1].size() << std::endl;
         // for (Tree t : tree_arr[i-1]) {
         //   std::cout << t.to_string() << std::endl;

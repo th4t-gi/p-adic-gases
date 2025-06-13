@@ -1,5 +1,5 @@
 CC = clang++
-INCLUDES_FLAGS = -lsqlite3
+INCLUDES_FLAGS = -lsqlite3 -I/opt/homebrew/include -L/opt/homebrew/lib -lboost_program_options
 
 # Set DEBUG=1 to enable debug info, otherwise no debug info
 DEBUG ?= 0
@@ -14,7 +14,7 @@ endif
 SRC_DIR := src
 BUILD_DIR := build
 
-EXEC = phylogenees partitions blocks translate
+EXEC = phylogenees partitions blocks translate test
 DEPS = utils api tree
 
 # Source and Object Files
