@@ -9,6 +9,16 @@ Tree::Tree(std::vector<code_t> b, label_size_t size, std::vector<degree_t> d) : 
 
 double Tree::probability() { return 0; }
 
+//Calculates the trem of the summand for the partition equation
+double Tree::term(double beta, int p, std::vector<double> interaction_arr){
+  double prod = 1.0;
+  for (int i = 0; i< branches.size(); i++){
+    prod *= (falling_factorial(p, degrees[i]))/(pow(p, bit_length(branches[i]) + (interaction_arr[branches[i]] * beta)) - p);
+  }
+  return prod;
+}
+
+
 Tree Tree::translate(code_t target) {
   Tree translated_fork;
   translated_fork.setSize = setSize;
