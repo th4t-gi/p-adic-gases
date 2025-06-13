@@ -5,6 +5,7 @@
 !*.h
 
 !.gitignore
+!.clang-format
 !Makefile
 # !trees.db
 !sqlite2cpp.py
@@ -13,3 +14,4 @@
 
 # exclude all these:
 **/.DS_Store
+test.cpp
