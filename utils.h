@@ -2,11 +2,13 @@
 #include <iostream>
 #include <vector>
 
-typedef unsigned int code;
+typedef uint16_t code_t;
+typedef uint8_t label_size_t;
+typedef uint8_t degree_t;
 
 int factorial(int n);
 long phylogenees_num(int n);
-int bit_length(unsigned int val);
+int bit_length(code_t val);
 
 void printb(unsigned int num, const char* pre);
 

@@ -7,7 +7,7 @@ DEBUG ?= 0
 ifeq ($(DEBUG),1)
   CFLAGS = -std=c++20 -g
 else
-  CFLAGS = -std=c++20 -O2
+  CFLAGS = -std=c++20 -O3
 endif
 
 EXEC = translate blocks phylogenees test
