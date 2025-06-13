@@ -7,8 +7,12 @@ typedef uint8_t label_size_t;
 typedef uint8_t degree_t;
 
 int factorial(int n);
+double falling_factorial(int n, int k);
 long phylogenees_num(int n);
 int bit_length(code_t val);
+
+std::vector<double> interaction_energy(double charges[], int size_of_charge);
+
 
 void printb(unsigned int num, const char* pre);
 
