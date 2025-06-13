@@ -17,14 +17,6 @@ int factorial(int n) {
   return n * factorial(n - 1);
 }
 
-double falling_factorial (int x, int k){
-  double prod = 1.0;
-  for (int i = 0; i <= k-1; i++){
-    prod *= x-i;
-  }
-  return prod;
-}
-
 // TODO: Should we change this to the other formula?
 long phylogenees_num(int n) {
   std::vector<double> previous{0.0, 1.0, 0.5};
@@ -101,20 +93,4 @@ std::string binarySet(unsigned n, int width) {
   }
   result += "}";
   return result;
-}
-/* ################### physics ################
- *
- */
-std::vector<double> interaction_energy(double charges[], int size_of_charge){
-  std::vector<double> out; 
-  for (unsigned int J = 0; J < pow(2, size_of_charge); J++){
-    double sum1 = 0.0;
-    double sum2 = 0.0;
-    for(int i = 1; i <= size_of_charge; i++){
-        sum1 += (((bool)(J & (1 << (i-1)))) * charges[i-1]);
-        sum2 += (((bool)(J & (1 << (i-1)))) * charges[i-1]*charges[i-1]);
-    }
-    out.push_back(((sum1 * sum1) - sum2)/2.0);
-  }
-  return out;
 }

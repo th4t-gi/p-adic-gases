@@ -1,8 +1,8 @@
 *
 
 #include all these:
-!*.cpp
-!*.h
+!src
+!src/**
 
 !.gitignore
 !.clang-format
