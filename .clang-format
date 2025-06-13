@@ -1,0 +1,11 @@
+BasedOnStyle: Google
+IndentWidth: 2
+ColumnLimit: 120
+BreakBeforeBinaryOperators: None
+
+AlignAfterOpenBracket: BlockIndent
+ContinuationIndentWidth: 2
+BinPackArguments: false
+BinPackParameters: OnePerLine
+PointerAlignment: Left
+DerivePointerAlignment: false

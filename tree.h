@@ -4,21 +4,19 @@
 
 #include "utils.h"
 
-std::string binarySet(unsigned n, int width);
-
 class Tree {
  public:
-  std::vector<code> branches;
-  std::vector<int> degrees;
-  int setSize;
+  std::vector<code_t> branches;
+  std::vector<degree_t> degrees;
+  label_size_t setSize;
 
   Tree();
-  Tree(std::vector<code> b, int size);
-  Tree(std::vector<code> b, int size, std::vector<int> d);
+  Tree(std::vector<code_t> b, label_size_t size);
+  Tree(std::vector<code_t> b, label_size_t size, std::vector<degree_t> d);
   double probability();
   void append(Tree& tree, bool exclude_top = false);
   void addDegrees(Tree& tree);
-  Tree translate(code target);
-  std::string to_string();
-  std::string to_set_string();
+  Tree translate(code_t target);
+  std::string to_string() const;
+  std::string to_set_string() const;
 };

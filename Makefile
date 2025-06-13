@@ -7,15 +7,17 @@ DEBUG ?= 0
 ifeq ($(DEBUG),1)
   CFLAGS = -std=c++20 -g
 else
-  CFLAGS = -std=c++20 -O2
+  CFLAGS = -std=c++20 -O3
 endif
 
-EXEC = translate blocks phylogenees test
+EXEC = phylogenees partitions blocks translate
+EXEC_BINS = $(addprefix build/, $(EXEC))
+
 DEPS = utils.o api.o tree.o
 
-.PHONY: all clean
+.PHONY: all clean fresh
 
-all: $(DEPS) $(EXEC)
+all: $(EXEC_BINS)
 
 fresh:
 	make clean && make all
@@ -26,9 +28,12 @@ build:
 %.o: %.cpp
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# General rule for binaries
-$(EXEC): %: %.cpp $(DEPS) | build
+test: %.cpp $(DEPS)
 	$(CC) $(CFLAGS) $(INCLUDES_FLAGS) $^ -o build/$@
+
+# General rule for binaries
+build/%: %.cpp $(DEPS) | build
+	$(CC) $(CFLAGS) $(INCLUDES_FLAGS) $^ -o $@
 
 clean:
 	rm -rf *.o build
