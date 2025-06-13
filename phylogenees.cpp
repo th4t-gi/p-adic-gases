@@ -133,6 +133,7 @@ int main(void) {
     }
   }
 
+  // more config (for printing and confirmation)
   char print = question("Do you want to print out the trees? (y/_n_) ", 'n');
   char ready = question("ready to run calculation? (_y_/n)", 'y');
   if (ready == 'n') {
