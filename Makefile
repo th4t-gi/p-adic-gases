@@ -6,15 +6,17 @@ DEBUG ?= 0
 
 ifeq ($(DEBUG),1)
   CFLAGS = -std=c++20 -g
+	EXEC = test
 else
   CFLAGS = -std=c++20 -O3
+	EXEC =
 endif
 
 # Directories
 SRC_DIR := src
 BUILD_DIR := build
 
-EXEC = phylogenees partitions blocks translate test
+EXEC += phylogenees partitions blocks translate
 DEPS = utils api tree
 
 # Source and Object Files

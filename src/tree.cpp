@@ -1,6 +1,6 @@
 #include "tree.h"
 
-#include "utils.h"  // if you use binarySet
+#include "utils.h"
 
 Tree::Tree() : branches{}, setSize{0}, degrees{} {}
 

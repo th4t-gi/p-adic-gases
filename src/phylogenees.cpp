@@ -1,10 +1,11 @@
+#include <boost/program_options.hpp>
 #include <iostream>
 #include <map>
 
 #include "api.h"
 #include "tree.h"
 
-#include <boost/program_options.hpp>
+namespace po = boost::program_options;
 
 void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local) {
   // base cases for 1, 2
@@ -87,57 +88,59 @@ void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local) {
   return;
 }
 
-int reset(TreesApi& db) {
-  char response = question("Do you want to reset? (y/n) ", 'n');
-  if (response == 'n') {
-    std::cout << "cancelling reset.." << std::endl;
+int main(int argc, char** argv) {
+  code_t N;
+  std::string import_file = "";
+  std::string export_file = "";
+  int reset_to;
+
+  // Declaring arguments
+  po::options_description desc("Allowed options");
+  desc.add_options()
+        ("help", "produce help message")
+        ("n-value,n", po::value<code_t>(&N)->required(), "Number of particles")
+        ("reset,r", po::value<int>(&reset_to),"Reset database to kth size")
+        ("print-trees,p", "Do you want to print trees?")
+        ("import", po::value<std::string>(&import_file), "Imported database")
+        ("export", po::value<std::string>(&export_file), "Exported database")
+        ("verbose,v", "Do verbose or not");
+
+  po::positional_options_description p;
+  p.add("n-value", 1);
+
+  po::variables_map vm;
+
+  try {
+    po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+
+    if (vm.count("help")) {
+      std::cout << desc << std::endl;
+      return 0;
+    }
+
+    po::notify(vm);
+  } catch (const po::error& e) {
+    std::cerr << "Error parsing options: " << e.what() << std::endl;
     return 1;
   }
 
-  int size = question("what sizes do you want to save (put 0 for nothing)? ", 0);
+  bool verbose = vm.count("verbose");
+  bool print = vm.count("print-trees");
 
-  db.reset_trees(size);
-
-  std::cout << "reseted successfully" << std::endl;
-  return 0;
-}
-
-int main(int argc, char** argv) {
-  code_t N;
-  std::string import_file;
-  std::string export_file;
-  namespace po = boost::program_options;
-
-  //Declaring the options
-    po::options_description desc("Allowed options");
-    desc.add_options()
-        ("help", "produce help message")
-        ("n-value", po::value<code_t>(&N)->required(), "Required number of particles")
-        ("reset", po::value<int>(),"Reset database to kth size")
-        ("print-trees","Do you want to print trees?")
-        ("import", po::value<std::string>(&import_file), "Imported database")
-        ("export", po::value<std::string>(&export_file), "Exported database")
-        ("verbose", "Do verbose or not")
-    ;
-
-  po::variables_map vm;
-  po::store(po::parse_command_line(argc, argv, desc), vm);
-  po::notify(vm);    
-
-  if (vm.count("help")) {
-      std::cout << desc << "\n";
-      return 1;
-  }
-
+  // intialize database connection
   TreesApi db("trees.db", true);
 
-
-  if (vm.count("export")) {
-      printf("You are exporting to %s\n", export_file.c_str());
+  // import from csv
+  if (!import_file.empty()) {
+    db.import_csv(import_file);
   }
 
-  if (vm.count("verbose")) {
-      printf("Do verbose\n");
+  //reset
+  if (vm.count("reset") && (N > reset_to)) {
+    printf("%d", reset_to);
+    db.reset_trees(reset_to);
+    std::cout << "The database was reset.\n";
   }
 
   // calculate if N is less than max
@@ -160,8 +163,8 @@ int main(int argc, char** argv) {
       tree_arr.push_back(std::vector<Tree>{});
     }
   }
-  
-  char ready = question("ready to run calculation? (_y_/n)", 'y');
+
+  char ready = question("ready to run calculation? (y/n) ", 'y');
 
   if (ready == 'n') {
     std::cout << "cancelling calculation" << std::endl;
@@ -180,7 +183,7 @@ int main(int argc, char** argv) {
       std::cout << "\tbeginning make_chains(N = " + std::to_string(i) + ")" << std::endl;
       make_chains(i, tree_arr);
 
-      if (vm.count("print-trees")) {
+      if (print) {
         std::cout << "[tree_arr] " << tree_arr[i - 1].size() << std::endl;
         // for (Tree t : tree_arr[i-1]) {
         //   std::cout << t.to_string() << std::endl;
@@ -190,7 +193,7 @@ int main(int argc, char** argv) {
 
     auto insertStart = std::chrono::steady_clock::now();
     double calcDuration = std::chrono::duration<double, std::milli>(insertStart - start).count() / 1000.0;
-    std::cout << "[calculations] " << calcDuration << "s" << std::endl;
+    if (verbose) std::cout << "[calculations] " << calcDuration << "s" << std::endl;
 
     // Writing to filesystem
     for (int i = max + 1; i <= N; i++) {
@@ -199,7 +202,11 @@ int main(int argc, char** argv) {
     }
     auto insertEnd = std::chrono::steady_clock::now();
     double insertDuration = std::chrono::duration<double, std::milli>(insertEnd - insertStart).count() / 1000.0;
-    std::cout << "[insert] " << insertDuration << "s" << std::endl;
+    if (verbose) std::cout << "[insert] " << insertDuration << "s" << std::endl;
+
+    if (!export_file.empty()) {
+      db.export_csv(export_file);
+    }
 
     auto end = std::chrono::steady_clock::now();
     auto diff = end - start;
