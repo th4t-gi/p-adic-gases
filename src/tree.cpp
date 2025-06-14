@@ -40,12 +40,15 @@ void Tree::addDegrees(Tree& tree) {}
 std::string Tree::to_string() const {
   std::string result = "[";
   bool comma = false;
-  for (auto branch : branches) {
-    if (comma) result += ",";
+  for (int i = 0; i < branches.size(); i++) {
+    auto b = branches[i];
+    auto d = degrees[i];
+    if (comma) result += " ,";
     comma = true;
-    result += std::to_string(branch);
+    result += "\033[1m" + std::to_string(b) + "\033[0m:" + std::to_string(d);
   }
   result += "]";
+
   return result;
 }
 

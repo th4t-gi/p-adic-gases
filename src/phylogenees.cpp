@@ -136,7 +136,7 @@ int main(int argc, char** argv) {
     db.import_csv(import_file);
   }
 
-  //reset
+  // reset
   if (vm.count("reset") && (N > reset_to)) {
     printf("%d", reset_to);
     db.reset_trees(reset_to);
@@ -183,11 +183,11 @@ int main(int argc, char** argv) {
       std::cout << "\tbeginning make_chains(N = " + std::to_string(i) + ")" << std::endl;
       make_chains(i, tree_arr);
 
+      std::cout << "[tree_arr] " << tree_arr[i - 1].size() << std::endl;
       if (print) {
-        std::cout << "[tree_arr] " << tree_arr[i - 1].size() << std::endl;
-        // for (Tree t : tree_arr[i-1]) {
-        //   std::cout << t.to_string() << std::endl;
-        // }
+        for (Tree t : tree_arr[i - 1]) {
+          std::cout << t.to_string() << std::endl;
+        }
       }
     }
 
