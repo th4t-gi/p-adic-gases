@@ -1,59 +1,90 @@
 #include "api.h"
 
-#include <sqlpp11/custom_query.h>
+#include <sqlpp11/functions.h>
+#include <sqlpp11/insert.h>
+#include <sqlpp11/parameter.h>
 #include <sqlpp11/remove.h>
 #include <sqlpp11/select.h>
 
-#include "tree.h"
-#include "utils.h"
-
-// int main(void) {
-//   sqlpp::sqlite3::connection_config config;
-//   config.path_to_database = "trees.db";
-//   config.flags = SQLITE_OPEN_READWRITE;
-
-//   trees::Blocks table;
-//   connection db(config);
-
-//   // auto query = sqlpp::custom_query("SELECT * FROM trees WHERE id =
-//   1;").with_result_type_of(select(sqlpp::value("").as(table.setStr)));
-
-//   // for (const auto& row : db(query)) {
-//   //     std::cout << row.setStr << std::endl; // prints: {"a":1,"b":2}
-//   // }
-
-// }
-
-// create table
-template <std::size_t T>
-void create_table(connection& db, std::string name, std::array<std::string, T> cols) {
-  std::string sql = "CREATE TABLE " + name + " IF NOT EXISTS (";
-  for (std::string s : cols) {
-    sql += s + "\n";
-  }
-
-  // db.execute()
-  // sqlite3_exec(db, sql.c_str(), );
+TreesApi::TreesApi(std::string filename, bool verbose, std::string outDir)
+    : db([&] {
+        sqlpp::sqlite3::connection_config config;
+        config.path_to_database = filename;
+        config.flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
+        return connection{config};
+      }()),
+      filename{filename},
+      verbose{verbose},
+      outDir{outDir} {
+  init();
 }
 
-namespace trees {
+void TreesApi::init() {
+  // create db if not created fron ddl.txt;
+  std::ifstream file("ddl.txt");
 
-void reset_trees(connection& db, label_size_t size) {
-  trees::Trees trees;
+  if (file.is_open()) {
+    std::string sql = "";
+    std::string line;
+
+    while (std::getline(file, line)) {
+      sql += line + "\n";
+      // if we've reached the end of a statement
+      if (line.back() == ';') {
+        db.execute(sql);
+        sql = "";
+      }
+    }
+    file.close();
+  }
+}
+
+void TreesApi::import_csv(const std::string& file, const std::string& dbname, char seperator) {
+  std::string cmd = std::format(
+    "sqlite3 {} '.mode csv' '.separator {}' '.import --skip 1 {}/{} {}' 2>/dev/null",
+    this->filename,
+    std::string{seperator},
+    outDir,
+    file,
+    dbname
+  );
+  if (verbose) std::cout << "[import] " << cmd << std::endl;
+  system(cmd.c_str());
+
+  int count = db(select(sqlpp::count(1)).from(trees).unconditionally()).front().count;
+
+  if (verbose) std::cout << "[import] Imported " << count << " rows" << std::endl;
+}
+
+void TreesApi::export_csv(const std::string& file, const std::string& dbname, char seperator) {
+  std::string cmd = std::format(
+    "sqlite3 -header -csv -separator {} {} 'select * from {};' > {}/{}",
+    std::string{seperator},
+    this->filename,
+    dbname,
+    outDir,
+    file
+  );
+  if (verbose) std::cout << "[export] " << cmd << std::endl;
+  system(cmd.c_str());
+  if (verbose) std::cout << "[export] exported to " << file << std::endl;
+}
+
+void TreesApi::reset_trees(label_size_t labelSize) {
   std::string name = trees::Trees::_alias_t::_literal;
 
-  db(sqlpp::remove_from(trees).where(trees.setSize > size));
+  if (verbose) std::cout << "[reset] resetting trees to N = " << std::to_string(labelSize) << std::endl;
+  db(remove_from(trees).where(trees.labelSize > labelSize));
 
-  int count = db(sqlpp::select(sqlpp::count(1)).from(trees).unconditionally()).front().count;
+  int count = db(select(sqlpp::count(1)).from(trees).unconditionally()).front().count;
 
   auto query =
     sqlpp::verbatim("UPDATE SQLITE_SEQUENCE SET SEQ=" + std::to_string(count) + " WHERE NAME='" + name + "'");
   db.execute(query);
 }
 
-label_size_t get_max_label_size(connection& db) {
-  trees::Trees trees;
-  auto result = db(select(max(trees.setSize)).from(trees).unconditionally());
+label_size_t TreesApi::get_max_label_size() {
+  auto result = db(select(max(trees.labelSize)).from(trees).unconditionally());
 
   if (!result.empty()) {
     return result.front().max;
@@ -61,50 +92,15 @@ label_size_t get_max_label_size(connection& db) {
   return 0;
 }
 
-auto get_block(connection& db, int id = 0) {
-  trees::Blocks blocks;
-  auto select_stmt = db.prepare(select(all_of(blocks)).from(blocks).where(blocks.id == parameter(blocks.id)));
-
-  select_stmt.params.id = id;
-  return db(select_stmt);
-}
-
-int insert_block(connection& db, int id, std::string setStr, int size) {
-  trees::Blocks blocks;
-
-  try {
-    auto insert_stmt = db.prepare(insert_into(blocks).set(
-      blocks.id = parameter(blocks.id),
-      blocks.setStr = parameter(blocks.setStr),
-      blocks.setSize = parameter(blocks.setSize)
-    ));
-
-    insert_stmt.params.id = id;
-    insert_stmt.params.setStr = setStr;
-    insert_stmt.params.setSize = size;
-
-    db(insert_stmt);
-  } catch (const std::exception& e) {
-    std::cerr << e.what() << std::endl;
-    return 1;
-  }
-
-  return 0;
-}
-
-std::vector<Tree> get_trees(connection& db, label_size_t setSize) {
+std::vector<Tree> TreesApi::get_trees(label_size_t labelSize) {
   auto start = std::chrono::steady_clock::now();
-  trees::Trees trees;
-  auto select_stmt = db.prepare(select(all_of(trees)).from(trees).where(trees.setSize == parameter(trees.setSize)));
-
-  select_stmt.params.setSize = setSize;
+  auto select_stmt = db.prepare(select(all_of(trees)).from(trees).where(trees.labelSize == labelSize));
 
   std::vector<Tree> out;
-  json j;
   for (auto& row : db(select_stmt)) {
     std::vector<code_t> branches = json::parse(row.branches.text).get<std::vector<code_t>>();
     std::vector<degree_t> degrees = json::parse(row.degrees.text).get<std::vector<degree_t>>();
-    Tree new_tree(branches, row.setSize.value(), degrees);
+    Tree new_tree(branches, row.labelSize.value(), degrees);
 
     out.push_back(new_tree);
   }
@@ -113,13 +109,13 @@ std::vector<Tree> get_trees(connection& db, label_size_t setSize) {
   auto diff = end - start;
 
   double duration = std::chrono::duration<double, std::milli>(diff).count();
-
-  std::cout << "[get_trees] setSize=" << setSize << " " << duration << " ms" << std::endl;
+  if (verbose)
+  std::cout << "[get_trees] setSize=" << std::to_string(labelSize) << " " << duration << " ms" << std::endl;
 
   return out;
 }
 
-int insert_tree(connection& db, const Tree& t) {
+int TreesApi::insert_tree(const Tree& t) {
   auto start = std::chrono::steady_clock::now();
   trees::Trees trees;
   json branchesArr = t.branches;
@@ -127,7 +123,7 @@ int insert_tree(connection& db, const Tree& t) {
 
   try {
     db(insert_into(trees).set(
-      trees.setSize = static_cast<int64_t>(t.setSize),
+      trees.labelSize = static_cast<int64_t>(t.setSize),
       trees.branches = branchesArr.dump(),
       trees.degrees = degreesArr.dump()
     ));
@@ -141,19 +137,19 @@ int insert_tree(connection& db, const Tree& t) {
 
   double duration = std::chrono::duration<double, std::milli>(diff).count();
 
-  std::cout << "[insert_tree] b=" + t.to_string() << " " << duration << " ms" << std::endl;
+  if (verbose) std::cout << "[insert_tree] b=" + t.to_string() << " " << duration << " ms" << std::endl;
 
   return 0;
 }
 
-int insert_trees(connection& db, const std::vector<Tree>& tr) {
+int TreesApi::insert_trees(const std::vector<Tree>& tr) {
   auto start = std::chrono::steady_clock::now();
   trees::Trees trees;
 
   static constexpr size_t CHUNK_SIZE = 100000;
 
   for (int i = 0; i < tr.size(); i += CHUNK_SIZE) {
-    auto multi_insert = insert_into(trees).columns(trees.setSize, trees.branches, trees.degrees);
+    auto multi_insert = insert_into(trees).columns(trees.labelSize, trees.branches, trees.degrees);
     multi_insert.values._data._insert_values.reserve(tr.size());
 
     for (int j = i; j < i + CHUNK_SIZE && j < tr.size(); ++j) {
@@ -162,7 +158,7 @@ int insert_trees(connection& db, const std::vector<Tree>& tr) {
       json degreesArr = t.degrees;
 
       multi_insert.values.add(
-        trees.setSize = static_cast<int64_t>(t.setSize),
+        trees.labelSize = static_cast<int64_t>(t.setSize),
         trees.branches = branchesArr.dump(),
         trees.degrees = degreesArr.dump()
       );
@@ -172,7 +168,7 @@ int insert_trees(connection& db, const std::vector<Tree>& tr) {
       db.execute("BEGIN TRANSACTION");
       db(multi_insert);
       db.execute("COMMIT");
-      std::cout << "\r    [insert] batch " << i / CHUNK_SIZE + 1 << " saved" << std::flush;
+      if (verbose) std::cout << "\r    [insert] batch " << i / CHUNK_SIZE + 1 << " saved" << std::flush;
     } catch (const std::exception& e) {
       std::cerr << e.what() << std::endl;
       return 1;
@@ -184,7 +180,40 @@ int insert_trees(connection& db, const std::vector<Tree>& tr) {
 
   double duration = std::chrono::duration<double, std::milli>(diff).count();
 
-  std::cout << "\n[insert_trees] " << duration << " ms" << std::endl;
+  if (verbose) std::cout << "\n[insert_trees] " << duration << " ms" << std::endl;
+
+  return 0;
+}
+
+namespace trees {
+
+auto get_block(connection& db, int id = 0) {
+  trees::Blocks blocks;
+  auto select_stmt = db.prepare(select(all_of(blocks)).from(blocks).where(blocks.blockId == parameter(blocks.blockId)));
+
+  select_stmt.params.blockId = id;
+  return db(select_stmt);
+}
+
+int insert_block(connection& db, int id, std::string setStr, int size) {
+  trees::Blocks blocks;
+
+  try {
+    auto insert_stmt = db.prepare(insert_into(blocks).set(
+      blocks.blockId = parameter(blocks.blockId),
+      blocks.setStr = parameter(blocks.setStr),
+      blocks.labelSize = parameter(blocks.labelSize)
+    ));
+
+    insert_stmt.params.blockId = id;
+    insert_stmt.params.setStr = setStr;
+    insert_stmt.params.labelSize = size;
+
+    db(insert_stmt);
+  } catch (const std::exception& e) {
+    std::cerr << e.what() << std::endl;
+    return 1;
+  }
 
   return 0;
 }

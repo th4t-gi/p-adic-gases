@@ -41,6 +41,7 @@ types = {
     'text': 'text',
     'blob': 'blob',
     'real': 'floating_point',
+    'json': 'text'
 }
 
 def main():
@@ -188,10 +189,10 @@ def repl_camel_case_func(m):
         return m.group(1) + m.group(2).upper()
 
 def class_name_naming_func(s):
-    return re.sub("(^|\s|[_0-9])(\S)", repl_camel_case_func, s)
+    return re.sub(r"(^|\s|[_0-9])(\S)", repl_camel_case_func, s)
 
 def member_name_naming_func(s):
-    return re.sub("(\s|_|[0-9])(\S)", repl_camel_case_func, s)
+    return re.sub(r"(\s|_|[0-9])(\S)", repl_camel_case_func, s)
 
 def escape_if_reserved(name):
     reserved_names = [

@@ -11,6 +11,7 @@
 !sqlite2cpp.py
 !.vscode
 !.vscode/**
+!ddl.txt
 
 # exclude all these:
 **/.DS_Store

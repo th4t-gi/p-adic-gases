@@ -6,7 +6,7 @@
 
 #include <boost/program_options.hpp>
 
-void make_chains(sqlpp::sqlite3::connection& db, label_size_t N, std::vector<std::vector<Tree>>& local) {
+void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local) {
   // base cases for 1, 2
   if (N <= 2) {
     switch (N) {
@@ -87,7 +87,7 @@ void make_chains(sqlpp::sqlite3::connection& db, label_size_t N, std::vector<std
   return;
 }
 
-int reset(connection& db) {
+int reset(TreesApi& db) {
   char response = question("Do you want to reset? (y/n) ", 'n');
   if (response == 'n') {
     std::cout << "cancelling reset.." << std::endl;
@@ -96,22 +96,13 @@ int reset(connection& db) {
 
   int size = question("what sizes do you want to save (put 0 for nothing)? ", 0);
 
-  trees::reset_trees(db, size);
+  db.reset_trees(size);
 
   std::cout << "reseted successfully" << std::endl;
   return 0;
 }
 
 int main(int argc, char** argv) {
-  // intialize database connection
-  sqlpp::sqlite3::connection_config config;
-  config.path_to_database = "trees.db";
-  config.flags = SQLITE_OPEN_READWRITE;
-
-  trees::Trees trees;
-  sqlpp::sqlite3::connection db(config);
-  db.execute("PRAGMA busy_timeout = 5000;");
-
   code_t N;
   std::string import_file;
   std::string export_file;
@@ -138,15 +129,8 @@ int main(int argc, char** argv) {
       return 1;
   }
 
-  if (vm.count("reset") && (N > vm["reset"].as<int>())) {
-      trees::reset_trees(db, vm["reset"].as<int>());
-  } else {
-      std::cout << "The database was not reset.\n";
-  }
-      
-  if (vm.count("import")) {
-      printf("You are importing from %s\n", import_file.c_str());
-  }
+  TreesApi db("trees.db", true);
+
 
   if (vm.count("export")) {
       printf("You are exporting to %s\n", export_file.c_str());
@@ -156,12 +140,20 @@ int main(int argc, char** argv) {
       printf("Do verbose\n");
   }
 
-  int max = trees::get_max_label_size(db);
+  // calculate if N is less than max
+  int max = db.get_max_label_size();
 
+  if (max >= N) {
+    std::cout << "already generated trees up to N = " + std::to_string(N) + " (max = " + std::to_string(max) + ")"
+              << std::endl;
+    return 0;
+  }
+
+  // caching trees
   std::vector<std::vector<Tree>> tree_arr;
   tree_arr.reserve(N);
   for (int k = 1; k <= N; k++) {
-    std::vector<Tree> v = trees::get_trees(db, k);
+    std::vector<Tree> v = db.get_trees(k);
     if (v.size()) {
       tree_arr.push_back(v);
     } else {
@@ -186,7 +178,7 @@ int main(int argc, char** argv) {
     // compute chains for size max + 1 to N and store in tree_arr
     for (int i = max + 1; i <= N; i++) {
       std::cout << "\tbeginning make_chains(N = " + std::to_string(i) + ")" << std::endl;
-      make_chains(db, i, tree_arr);
+      make_chains(i, tree_arr);
 
       if (vm.count("print-trees")) {
         std::cout << "[tree_arr] " << tree_arr[i - 1].size() << std::endl;
@@ -203,7 +195,7 @@ int main(int argc, char** argv) {
     // Writing to filesystem
     for (int i = max + 1; i <= N; i++) {
       std::cout << "N: " << i << " --------" << std::endl;
-      trees::insert_trees(db, tree_arr[i - 1]);
+      db.insert_trees(tree_arr[i - 1]);
     }
     auto insertEnd = std::chrono::steady_clock::now();
     double insertDuration = std::chrono::duration<double, std::milli>(insertEnd - insertStart).count() / 1000.0;
