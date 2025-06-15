@@ -102,6 +102,16 @@ std::string binarySet(unsigned n, int width) {
   result += "}";
   return result;
 }
+
+std::string concat_argv(int argc, char* argv[]) {
+  std::ostringstream oss;
+  for (int i = 0; i < argc; ++i) {
+    if (i > 0) oss << ' ';
+    oss << argv[i];
+  }
+  return oss.str();
+}
+
 /* ################### physics ################
  *
  */

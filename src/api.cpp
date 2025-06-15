@@ -28,7 +28,10 @@ TreesApi::TreesApi(std::string filename, bool verbose, std::string outDir)
       filename{filename},
       verbose{verbose},
       outDir{outDir} {
+  db.execute("PRAGMA busy_timeout = 5000;");
   init();
+
+  SPDLOG_INFO("Loading {}...", filename);
 }
 
 void TreesApi::init() {
@@ -53,39 +56,39 @@ void TreesApi::init() {
 
 void TreesApi::import_csv(const std::string& file, const std::string& dbname, char seperator) {
   std::string cmd = std::format(
-    "sqlite3 {} '.mode csv' '.separator {}' '.import --skip 1 {}/{} {}' 2>/dev/null",
+    "sqlite3 {} '.mode csv' '.separator {}' '.import --skip 1 {}/{} {}'",
     this->filename,
     std::string{seperator},
     outDir,
     file,
     dbname
   );
-  if (verbose) std::cout << "[import] " << cmd << std::endl;
+  SPDLOG_INFO("running: {}", cmd);
   system(cmd.c_str());
 
   int count = db(select(sqlpp::count(1)).from(trees).unconditionally()).front().count;
 
-  if (verbose) std::cout << "[import] Imported " << count << " rows" << std::endl;
+  SPDLOG_INFO("Imported {} rows", count);
 }
 
 void TreesApi::export_csv(const std::string& file, const std::string& dbname, char seperator) {
   std::string cmd = std::format(
-    "sqlite3 -header -csv -separator {} {} 'select * from {};' > {}/{}",
+    "sqlite3 -header -csv -separator '{}' {} 'select * from {};' > {}/{}",
     std::string{seperator},
     this->filename,
     dbname,
     outDir,
     file
   );
-  if (verbose) std::cout << "[export] " << cmd << std::endl;
+  SPDLOG_INFO("running: {}", cmd);
   system(cmd.c_str());
-  if (verbose) std::cout << "[export] exported to " << file << std::endl;
+  SPDLOG_INFO("exported to {}", file);
 }
 
 void TreesApi::reset_trees(label_size_t labelSize) {
   std::string name = trees::Trees::_alias_t::_literal;
 
-  if (verbose) std::cout << "[reset] resetting trees to N = " << std::to_string(labelSize) << std::endl;
+  SPDLOG_DEBUG("resetting trees to N={}", labelSize);
   db(remove_from(trees).where(trees.labelSize > labelSize));
 
   int count = db(select(sqlpp::count(1)).from(trees).unconditionally()).front().count;
@@ -105,10 +108,11 @@ label_size_t TreesApi::get_max_label_size() {
 }
 
 std::vector<Tree> TreesApi::get_trees(label_size_t labelSize) {
-  auto start = std::chrono::steady_clock::now();
+  spdlog::stopwatch sw;
+  std::vector<Tree> out;
+
   auto select_stmt = db.prepare(select(all_of(trees)).from(trees).where(trees.labelSize == labelSize));
 
-  std::vector<Tree> out;
   for (auto& row : db(select_stmt)) {
     std::vector<code_t> branches = json::parse(row.branches.text).get<std::vector<code_t>>();
     std::vector<degree_t> degrees = json::parse(row.degrees.text).get<std::vector<degree_t>>();
@@ -117,19 +121,12 @@ std::vector<Tree> TreesApi::get_trees(label_size_t labelSize) {
     out.push_back(new_tree);
   }
 
-  auto end = std::chrono::steady_clock::now();
-  auto diff = end - start;
-
-  double duration = std::chrono::duration<double, std::milli>(diff).count();
-  if (verbose)
-  std::cout << "[get_trees] setSize=" << std::to_string(labelSize) << " " << duration << " ms" << std::endl;
-
+  SPDLOG_DEBUG("loaded {} trees of label size {} ({})", out.size(), labelSize, sw.elapsed_ms());
   return out;
 }
 
 int TreesApi::insert_tree(const Tree& t) {
-  auto start = std::chrono::steady_clock::now();
-  trees::Trees trees;
+  spdlog::stopwatch sw;
   json branchesArr = t.branches;
   json degreesArr = t.degrees;
 
@@ -144,19 +141,13 @@ int TreesApi::insert_tree(const Tree& t) {
     return 1;
   }
 
-  auto end = std::chrono::steady_clock::now();
-  auto diff = end - start;
-
-  double duration = std::chrono::duration<double, std::milli>(diff).count();
-
-  if (verbose) std::cout << "[insert_tree] b=" + t.to_string() << " " << duration << " ms" << std::endl;
+  SPDLOG_INFO("b={} ({})", t.to_string(), sw);
 
   return 0;
 }
 
-int TreesApi::insert_trees(const std::vector<Tree>& tr) {
-  auto start = std::chrono::steady_clock::now();
-  trees::Trees trees;
+int TreesApi::insert_trees(const std::vector<Tree>& tr, label_size_t N) {
+  spdlog::stopwatch sw;
 
   static constexpr size_t CHUNK_SIZE = 100000;
 
@@ -178,19 +169,15 @@ int TreesApi::insert_trees(const std::vector<Tree>& tr) {
       db.execute("BEGIN TRANSACTION");
       db(multi_insert);
       db.execute("COMMIT");
-      if (verbose) std::cout << "\r    [insert] batch " << i / CHUNK_SIZE + 1 << " saved" << std::flush;
+      std::cout << "\r[insert_trees]" << (N ? " N = " + std::to_string(N) : " ") << " batch " << i / CHUNK_SIZE + 1 << " saved" << std::flush;
     } catch (const std::exception& e) {
       std::cerr << e.what() << std::endl;
       return 1;
     }
   }
+  std::cout << std::endl;
 
-  auto end = std::chrono::steady_clock::now();
-  auto diff = end - start;
-
-  double duration = std::chrono::duration<double, std::milli>(diff).count();
-
-  if (verbose) std::cout << "\n[insert_trees] " << duration << " ms" << std::endl;
+  SPDLOG_DEBUG("({})", sw);
 
   return 0;
 }

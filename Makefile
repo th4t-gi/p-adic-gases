@@ -1,9 +1,10 @@
 CXX := clang++
-CXXFLAGS := -std=c++20 
-INCLUDES_FLAGS := -lsqlite3 -L/opt/homebrew/lib -lboost_program_options
+CXXFLAGS := -std=c++20 -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE
+INCLUDES_FLAGS := -lsqlite3 -L/opt/homebrew/lib -lboost_program_options -lfmt
+
 
 EXEC := phylogenees #partitions blocks translate
-DEPS := utils api tree
+DEPS := utils api tree logger
 
 # Set DEBUG=1 to enable debug info, otherwise no debug info
 DEBUG ?= 0
@@ -16,6 +17,11 @@ ifeq ($(DEBUG),1)
 endif
 
 CXXFLAGS += $(OPTFLAGS)
+
+GIT_HASH := $(shell git rev-parse --short HEAD)
+GIT_MSG  := $(shell git log -1 --pretty=%s)
+
+LOGGER_FLAGS := $(CXXFLAGS) -DGIT_HASH="\"$(GIT_HASH)\"" -DGIT_MSG="\"$(GIT_MSG)\""
 
 # Directories
 SRC_DIR := src
@@ -49,6 +55,9 @@ test: $(TEST_BIN)
 	./$(TEST_BIN)
 
 # Compile object files
+$(BUILD_DIR)/logger.o: $(SRC_DIR)/logger.cpp $(HDRS) | build
+	$(CXX) $(LOGGER_FLAGS) -c $< -o $@
+
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(HDRS) | build
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 

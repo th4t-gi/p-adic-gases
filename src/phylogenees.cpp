@@ -1,8 +1,14 @@
+
+#include <spdlog/fmt/chrono.h>
+#include <spdlog/spdlog.h>
+#include <spdlog/stopwatch.h>
+
 #include <boost/program_options.hpp>
 #include <iostream>
 #include <map>
 
 #include "api.h"
+#include "logger.h"
 #include "tree.h"
 
 namespace po = boost::program_options;
@@ -68,7 +74,6 @@ void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local) {
         } else {
           curr_fork.degrees.insert(curr_fork.degrees.begin(), 2);
         }
-        // std::cout << curr_fork.to_string() << std::endl;
         local[N - 1].push_back(curr_fork);
         // trees::insert_tree(db, curr_fork);
 
@@ -76,7 +81,6 @@ void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local) {
           dup_fork.append(translated_fork_2, false);
           dup_fork.degrees.insert(dup_fork.degrees.begin(), 2);
           // trees::insert_tree(db, dup_fork);
-          // std::cout << dup_fork.to_string() << std::endl;
           local[N - 1].push_back(dup_fork);
         }
 
@@ -105,6 +109,7 @@ int main(int argc, char** argv) {
         ("import", po::value<std::string>(&import_file), "Imported database")
         ("export", po::value<std::string>(&export_file), "Exported database")
         ("database,d", po::value<std::string>(&db_file), "database file")
+        ("ignore_change", "Do not ask what the changes/goal of this run is")
         ("verbose,v", "Do verbose or not");
 
   po::positional_options_description p;
@@ -127,32 +132,55 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  bool verbose = vm.count("verbose");
-  bool print = vm.count("print-trees");
+  // intialize logger
+  logger::init("log", vm.count("verbose") ? spdlog::level::debug : spdlog::level::info);
+
+  std::string change = "";
+  if (!vm.count("ignore_change")) {
+    std::cout << "What changes would you like to record? ";
+    std::getline(std::cin, change);
+  }
+
+  logger::preamble(concat_argv(argc, argv), change);
 
   // intialize database connection
   TreesApi db(db_file, true);
 
+  bool print = vm.count("print-trees");
+  // Start the clock
+  spdlog::stopwatch sw;
+
   // import from csv
   if (!import_file.empty()) {
-    db.import_csv(import_file);
+    db.import_csv(import_file, "trees");
+    SPDLOG_INFO("{}s", sw);
   }
+
+  sw.reset();
 
   // reset
   if (vm.count("reset") && (N > reset_to)) {
-    printf("%d", reset_to);
     db.reset_trees(reset_to);
-    std::cout << "The database was reset.\n";
+    SPDLOG_INFO("reset successfully ({:.4f}s)", sw);
   }
+
+  sw.reset();
 
   // calculate if N is less than max
   int max = db.get_max_label_size();
 
   if (max >= N) {
-    std::cout << "already generated trees up to N = " + std::to_string(N) + " (max = " + std::to_string(max) + ")"
-              << std::endl;
+    SPDLOG_WARN("already generated trees up to N = " + std::to_string(N) + " (max = " + std::to_string(max) + ")");
+
+    if (!export_file.empty()) {
+      db.export_csv(export_file);
+      SPDLOG_INFO("[export] ({:.4f}s)", sw);
+    }
+
     return 0;
   }
+
+  sw.reset();
 
   // caching trees
   std::vector<std::vector<Tree>> tree_arr;
@@ -166,26 +194,26 @@ int main(int argc, char** argv) {
     }
   }
 
+  SPDLOG_INFO("cached trees successfully ({:.4f}s)", sw);
+
   char ready = question("ready to run calculation? (y/n) ", 'y');
 
   if (ready == 'n') {
-    std::cout << "cancelling calculation" << std::endl;
+    SPDLOG_INFO("cancelling calculation");
     return 0;
   } else if (ready == 'y') {
     // MAIN LOGIC
-    std::cout << "Generating trees for all label sizes between " + std::to_string(max) + " and " + std::to_string(N) +
-                   "..."
-              << std::endl;
+    SPDLOG_INFO("Generating trees for all label sizes " + std::to_string(max) + " to " + std::to_string(N) + "...");
 
-    // Start the clock
-    auto start = std::chrono::steady_clock::now();
+    sw.reset();
+    spdlog::stopwatch total;
 
     // compute chains for size max + 1 to N and store in tree_arr
     for (int i = max + 1; i <= N; i++) {
-      std::cout << "\tbeginning make_chains(N = " + std::to_string(i) + ")" << std::endl;
+      SPDLOG_INFO("calculating N = {}", i);
       make_chains(i, tree_arr);
 
-      std::cout << "[tree_arr] " << tree_arr[i - 1].size() << std::endl;
+      SPDLOG_DEBUG("computed {} trees", tree_arr[i - 1].size());
       if (print) {
         for (Tree t : tree_arr[i - 1]) {
           std::cout << t.to_string() << std::endl;
@@ -193,29 +221,26 @@ int main(int argc, char** argv) {
       }
     }
 
-    auto insertStart = std::chrono::steady_clock::now();
-    double calcDuration = std::chrono::duration<double, std::milli>(insertStart - start).count() / 1000.0;
-    if (verbose) std::cout << "[calculations] " << calcDuration << "s" << std::endl;
+    SPDLOG_INFO("finished computation ({:.4f}s)", sw);
+    sw.reset();
 
     // Writing to filesystem
+    SPDLOG_INFO("saving to {}", db.filename);
     for (int i = max + 1; i <= N; i++) {
-      std::cout << "N: " << i << " --------" << std::endl;
-      db.insert_trees(tree_arr[i - 1]);
+      SPDLOG_DEBUG("starting N = {}", i);
+      db.insert_trees(tree_arr[i - 1], i);
     }
-    auto insertEnd = std::chrono::steady_clock::now();
-    double insertDuration = std::chrono::duration<double, std::milli>(insertEnd - insertStart).count() / 1000.0;
-    if (verbose) std::cout << "[insert] " << insertDuration << "s" << std::endl;
+
+    SPDLOG_INFO("finished write ({:.4f}s)", sw);
+    sw.reset();
 
     if (!export_file.empty()) {
+      SPDLOG_INFO("exporting to {}", export_file);
       db.export_csv(export_file);
+      SPDLOG_INFO("finished export ({:.4f}s)", sw);
     }
 
-    auto end = std::chrono::steady_clock::now();
-    auto diff = end - start;
-
-    double duration = std::chrono::duration<double, std::milli>(diff).count() / 1000.0;
-
-    std::cout << "[total] " << duration << "s" << std::endl;
+    SPDLOG_INFO("total time elapsed: {:.4f}s", total);
   }
 
   return 0;

@@ -1,6 +1,9 @@
 #pragma once
 
+#include <spdlog/spdlog.h>
+#include <spdlog/stopwatch.h>
 #include <sqlpp11/sqlite3/connection.h>
+#include <spdlog/fmt/chrono.h>
 
 #include <format>
 #include <fstream>
@@ -34,7 +37,7 @@ class TreesApi {
   label_size_t get_max_label_size();
 
   int insert_tree(const Tree& t);
-  int insert_trees(const std::vector<Tree>& tr);
+  int insert_trees(const std::vector<Tree>& tr, label_size_t N = 0);
 };
 
 namespace trees {

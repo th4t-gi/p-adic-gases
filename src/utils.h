@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <sstream>
 #include <vector>
 
 typedef uint16_t code_t;
@@ -16,6 +17,8 @@ std::vector<double> interaction_energy(double charges[], int size_of_charge);
 void printb(unsigned int num, const char* pre);
 
 std::string binarySet(unsigned n, int width);
+
+std::string concat_argv(int argc, char* argv[]);
 
 template <typename T>
 T question(std::string str, T def) {
