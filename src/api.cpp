@@ -6,6 +6,18 @@
 #include <sqlpp11/remove.h>
 #include <sqlpp11/select.h>
 
+std::string vectorToJsonString(const auto& vec) {
+  std::string result;
+  result.reserve(vec.size() * 8);
+  result += "[";
+  for (size_t i = 0; i < vec.size(); ++i) {
+    if (i > 0) result += ",";
+    result += std::to_string(vec[i]);
+  }
+  result += "]";
+  return result;
+}
+
 TreesApi::TreesApi(std::string filename, bool verbose, std::string outDir)
     : db([&] {
         sqlpp::sqlite3::connection_config config;
@@ -154,13 +166,11 @@ int TreesApi::insert_trees(const std::vector<Tree>& tr) {
 
     for (int j = i; j < i + CHUNK_SIZE && j < tr.size(); ++j) {
       const Tree& t = tr[j];
-      json branchesArr = t.branches;
-      json degreesArr = t.degrees;
 
       multi_insert.values.add(
         trees.labelSize = static_cast<int64_t>(t.setSize),
-        trees.branches = branchesArr.dump(),
-        trees.degrees = degreesArr.dump()
+        trees.branches = vectorToJsonString(t.branches),
+        trees.degrees = vectorToJsonString(t.degrees)
       );
     }
 
