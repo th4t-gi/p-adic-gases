@@ -1,17 +1,24 @@
 #pragma once
 #include <iostream>
+#include <sstream>
 #include <vector>
 
-typedef unsigned int code;
+typedef uint16_t code_t;
+typedef uint8_t label_size_t;
+typedef uint8_t degree_t;
 
 int factorial(int n);
 double falling_factorial(int x, int k);
 long phylogenees_num(int n);
-int bit_length(unsigned int val);
+int bit_length(code_t val);
+
+std::vector<double> interaction_energy(double charges[], int size_of_charge);
 
 void printb(unsigned int num, const char* pre);
 
 std::string binarySet(unsigned n, int width);
+
+std::string concat_argv(int argc, char* argv[]);
 
 template <typename T>
 T question(std::string str, T def) {

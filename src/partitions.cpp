@@ -83,6 +83,6 @@ int main(int argc, const char *argv[]) {
 
   printf("Last:");
   printPartition(partitions[partitions.size()-1]);
-  printf("%d\n", partitions.size());
+  printf("%lu\n", partitions.size());
   return 0;
 }

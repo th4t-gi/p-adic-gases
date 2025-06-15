@@ -1,15 +1,18 @@
 *
 
 #include all these:
-!*.cpp
-!*.h
+!src
+!src/**
 
 !.gitignore
+!.clang-format
 !Makefile
 # !trees.db
 !sqlite2cpp.py
 !.vscode
 !.vscode/**
+!ddl.txt
 
 # exclude all these:
 **/.DS_Store
+test.cpp

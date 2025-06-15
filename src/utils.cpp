@@ -17,18 +17,16 @@ int factorial(int n) {
   return n * factorial(n - 1);
 }
 
-double falling_factorial (int x, int k){
+double falling_factorial(int x, int k) {
   double prod = 1.0;
-  for (int i = 0; i <= k-1; i++){
-    prod *= x-i;
+  for (int i = 0; i <= k - 1; i++) {
+    prod *= x - i;
   }
   return prod;
 }
 
-
 // TODO: Should we change this to the other formula?
 long phylogenees_num(int n) {
-
   std::vector<double> previous{0.0, 1.0, 0.5};
 
   // iterate up until the number we want
@@ -60,7 +58,7 @@ int bell_num(int n) {
  */
 
 // Function to count the number of 1s in an integers binary form
-int bit_length(unsigned int val) {
+int bit_length(code_t val) {
   int count = 0;
   while (val) {
     val &= (val - 1);
@@ -74,14 +72,13 @@ int bit_length(unsigned int val) {
  */
 
 void _printb(unsigned int num) {
-  if (!num)
-    return;
+  if (!num) return;
 
   _printb(num >> 1);
   std::cout << ((num & 1) ? '1' : '0');
 }
 
-void printb(unsigned int num, const char *pre = "") {
+void printb(unsigned int num, const char* pre = "") {
   std::cout << pre;
   if (!num) {
     std::cout << '0' << std::endl;
@@ -97,12 +94,37 @@ std::string binarySet(unsigned n, int width) {
 
   for (int i = 0; i < width; ++i) {
     if (n & (1 << i)) {
-      if (comma)
-        result += ",";
-      result += std::to_string(i + 1); // 1-based indexing
+      if (comma) result += ",";
+      result += std::to_string(i + 1);  // 1-based indexing
       comma = true;
     }
   }
   result += "}";
   return result;
+}
+
+std::string concat_argv(int argc, char* argv[]) {
+  std::ostringstream oss;
+  for (int i = 0; i < argc; ++i) {
+    if (i > 0) oss << ' ';
+    oss << argv[i];
+  }
+  return oss.str();
+}
+
+/* ################### physics ################
+ *
+ */
+std::vector<double> interaction_energy(double charges[], int size_of_charge) {
+  std::vector<double> out;
+  for (unsigned int J = 0; J < pow(2, size_of_charge); J++) {
+    double sum1 = 0.0;
+    double sum2 = 0.0;
+    for (int i = 1; i <= size_of_charge; i++) {
+      sum1 += (((bool)(J & (1 << (i - 1)))) * charges[i - 1]);
+      sum2 += (((bool)(J & (1 << (i - 1)))) * charges[i - 1] * charges[i - 1]);
+    }
+    out.push_back(((sum1 * sum1) - sum2) / 2.0);
+  }
+  return out;
 }
