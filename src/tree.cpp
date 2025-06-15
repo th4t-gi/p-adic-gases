@@ -7,7 +7,14 @@ Tree::Tree() : branches{}, setSize{0}, degrees{} {}
 Tree::Tree(std::vector<code_t> b, label_size_t size) : branches{b}, setSize{size}, degrees{} {}
 Tree::Tree(std::vector<code_t> b, label_size_t size, std::vector<degree_t> d) : branches{b}, setSize{size}, degrees{d} {}
 
-double Tree::probability() { return 0; }
+double Tree::probability(int p) { 
+  double prod = 1.0;
+  for (int i = 0; i < branches.size(); i++){
+    double x = falling_factorial(p, degrees[i]);
+    prod *= x /(pow(p, bit_length(branches[i])) - p);
+  }
+  return prod; 
+}
 
 //Calculates the trem of the summand for the partition equation
 double Tree::term(double beta, int p, std::vector<double> interaction_arr){

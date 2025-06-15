@@ -14,6 +14,8 @@
 namespace po = boost::program_options;
 
 void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local) {
+  double sum_of_prob = 0;
+  int p = 2;
   // base cases for 1, 2
   if (N <= 2) {
     switch (N) {
@@ -75,6 +77,10 @@ void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local) {
           curr_fork.degrees.insert(curr_fork.degrees.begin(), 2);
         }
         local[N - 1].push_back(curr_fork);
+        // Probabilities
+        printf("The fork: %s\n", curr_fork.to_string().c_str());
+        printf("has probability %lf, with prime %d\n", curr_fork.probability(p), p);
+        sum_of_prob += curr_fork.probability(p);
         // trees::insert_tree(db, curr_fork);
 
         if (chain_size_2 > 1) {
@@ -82,6 +88,11 @@ void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local) {
           dup_fork.degrees.insert(dup_fork.degrees.begin(), 2);
           // trees::insert_tree(db, dup_fork);
           local[N - 1].push_back(dup_fork);
+
+          // Probabilities
+          printf("The fork: %s\n", dup_fork.to_string().c_str());
+          printf("has probability %lf, with prime %d\n", dup_fork.probability(p), p);
+          sum_of_prob += dup_fork.probability(p);
         }
 
         // Reset the current fork inside the for loop
@@ -89,6 +100,8 @@ void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local) {
       }
     }
   }
+  
+  printf("The sume of the probabilities is %lf\n", sum_of_prob);
   return;
 }
 

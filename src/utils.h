@@ -8,7 +8,7 @@ typedef uint8_t label_size_t;
 typedef uint8_t degree_t;
 
 int factorial(int n);
-double falling_factorial(int n, int k);
+double falling_factorial(int x, int k);
 long phylogenees_num(int n);
 int bit_length(code_t val);
 
