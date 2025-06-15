@@ -18,6 +18,6 @@ class Tree {
   void append(Tree& tree, bool exclude_top = false);
   void addDegrees(Tree& tree);
   Tree translate(code_t target);
-  std::string to_string() const;
+  std::string to_string(bool binary = false) const;
   std::string to_set_string() const;
 };

@@ -92,6 +92,7 @@ int main(int argc, char** argv) {
   code_t N;
   std::string import_file = "";
   std::string export_file = "";
+  std::string db_file = "trees.db";
   int reset_to;
 
   // Declaring arguments
@@ -103,6 +104,7 @@ int main(int argc, char** argv) {
         ("print-trees,p", "Do you want to print trees?")
         ("import", po::value<std::string>(&import_file), "Imported database")
         ("export", po::value<std::string>(&export_file), "Exported database")
+        ("database,d", po::value<std::string>(&db_file), "database file")
         ("verbose,v", "Do verbose or not");
 
   po::positional_options_description p;
@@ -129,7 +131,7 @@ int main(int argc, char** argv) {
   bool print = vm.count("print-trees");
 
   // intialize database connection
-  TreesApi db("trees.db", true);
+  TreesApi db(db_file, true);
 
   // import from csv
   if (!import_file.empty()) {

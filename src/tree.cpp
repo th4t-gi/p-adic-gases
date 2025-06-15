@@ -37,15 +37,15 @@ void Tree::append(Tree& tree, bool exclude_top) {
 
 void Tree::addDegrees(Tree& tree) {}
 
-std::string Tree::to_string() const {
+std::string Tree::to_string(bool binary) const {
   std::string result = "[";
   bool comma = false;
   for (int i = 0; i < branches.size(); i++) {
     auto b = branches[i];
     auto d = degrees[i];
-    if (comma) result += " ,";
+    if (comma) result += ", ";
     comma = true;
-    result += "\033[1m" + std::to_string(b) + "\033[0m:" + std::to_string(d);
+    result += "\033[1m" + (binary ? std::bitset<8>(b).to_string() : std::to_string(b)) + "\033[0m:" + std::to_string(d);
   }
   result += "]";
 
