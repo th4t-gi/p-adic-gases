@@ -1,23 +1,26 @@
-CC = clang++
-INCLUDES_FLAGS = -lsqlite3 -I/opt/homebrew/include -L/opt/homebrew/lib -lboost_program_options
+CXX := clang++
+CXXFLAGS := -std=c++20 
+INCLUDES_FLAGS := -lsqlite3 -L/opt/homebrew/lib -lboost_program_options
+
+EXEC := phylogenees #partitions blocks translate
+DEPS := utils api tree
 
 # Set DEBUG=1 to enable debug info, otherwise no debug info
 DEBUG ?= 0
+OPTFLAGS ?= -O2
 
 ifeq ($(DEBUG),1)
-  CFLAGS = -std=c++20 -g
-	EXEC = test
-else
-  CFLAGS = -std=c++20 -O3
-	EXEC =
+  CXXFLAGS += -g -DDEBUG
+	OPTFLAGS = -Og
+	EXEC += test
 endif
+
+CXXFLAGS += $(OPTFLAGS)
 
 # Directories
 SRC_DIR := src
 BUILD_DIR := build
 
-EXEC += phylogenees partitions blocks translate
-DEPS = utils api tree
 
 # Source and Object Files
 OBJ_DEPS := $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(DEPS)))
@@ -40,18 +43,18 @@ build:
 	mkdir -p $(BUILD_DIR)
 
 $(TEST_BIN): $(SRC_DIR)/$(TEST).cpp $(OBJ_DEPS)
-	$(CC) $(CFLAGS) $(INCLUDES_FLAGS) $^ -o $@
+	$(CXX) $(CXXFLAGS) $(INCLUDES_FLAGS) $^ -o $@
 
 test: $(TEST_BIN)
 	./$(TEST_BIN)
 
 # Compile object files
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(HDRS) | build
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Link executables (each one depends on its .cpp and all other .o files)
 $(BUILD_DIR)/%: $(SRC_DIR)/%.cpp $(OBJ_DEPS) | build
-	$(CC) $(CFLAGS) $(INCLUDES_FLAGS) $^ -o $@
+	$(CXX) $(CXXFLAGS) $(INCLUDES_FLAGS) $^ -o $@
 
 clean:
 	rm -rf $(BUILD_DIR)
