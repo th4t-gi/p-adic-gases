@@ -116,7 +116,7 @@ std::vector<Tree> TreesApi::get_trees(label_size_t labelSize) {
   for (auto& row : db(select_stmt)) {
     std::vector<code_t> branches = json::parse(row.branches.text).get<std::vector<code_t>>();
     std::vector<degree_t> degrees = json::parse(row.degrees.text).get<std::vector<degree_t>>();
-    Tree new_tree(branches, row.labelSize.value(), degrees);
+    Tree new_tree(row.id.value(), branches, row.labelSize.value(), degrees);
 
     out.push_back(new_tree);
   }

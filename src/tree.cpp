@@ -2,10 +2,12 @@
 
 #include "utils.h"
 
-Tree::Tree() : branches{}, setSize{0}, degrees{} {}
+Tree::Tree() : branches{}, setSize{0}, degrees{}, id{-1} {}
+Tree::Tree(std::vector<code_t> b, label_size_t size) : branches{b}, setSize{size}, degrees{}, id{-1} {}
+Tree::Tree(std::vector<code_t> b, label_size_t size, std::vector<degree_t> d) : branches{b}, setSize{size}, degrees{d}, id{-1} {}
 
-Tree::Tree(std::vector<code_t> b, label_size_t size) : branches{b}, setSize{size}, degrees{} {}
-Tree::Tree(std::vector<code_t> b, label_size_t size, std::vector<degree_t> d) : branches{b}, setSize{size}, degrees{d} {}
+Tree::Tree(long id, std::vector<code_t> b, label_size_t size) : branches{b}, setSize{size}, degrees{}, id{id} {}
+Tree::Tree(long id, std::vector<code_t> b, label_size_t size, std::vector<degree_t> d) : branches{b}, setSize{size}, degrees{d}, id{id} {}
 
 double Tree::probability(int p) { 
   double prod = 1.0;

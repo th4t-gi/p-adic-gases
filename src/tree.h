@@ -9,10 +9,13 @@ class Tree {
   std::vector<code_t> branches;
   std::vector<degree_t> degrees;
   label_size_t setSize;
+  long id;
 
   Tree();
   Tree(std::vector<code_t> b, label_size_t size);
   Tree(std::vector<code_t> b, label_size_t size, std::vector<degree_t> d);
+  Tree(long id, std::vector<code_t> b, label_size_t size);
+  Tree(long id, std::vector<code_t> b, label_size_t size, std::vector<degree_t> d);
   double probability(int p);
   double term(double beta, int p, std::vector<double> interaction_arr);
   void append(Tree& tree, bool exclude_top = false);
