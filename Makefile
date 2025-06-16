@@ -11,12 +11,13 @@ DEBUG ?= 0
 OPTFLAGS ?= -O2
 
 ifeq ($(DEBUG),1)
-  CXXFLAGS += -g -DDEBUG
-	OPTFLAGS = -Og
+  CXXFLAGS += -g -O0
+# OPTFLAGS = -Og
 	EXEC += test
+else
+	CXXFLAGS += $(OPTFLAGS)
 endif
 
-CXXFLAGS += $(OPTFLAGS)
 
 GIT_HASH := $(shell git rev-parse --short HEAD)
 GIT_MSG  := $(shell git log -1 --pretty=%s)

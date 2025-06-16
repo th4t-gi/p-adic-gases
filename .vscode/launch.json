@@ -3,13 +3,13 @@
   "configurations": [
     
     {
-      "name": "C/C++: clang++ build and debug active file",
+      "name": "C/C++: clang++ build and debug phylogenees",
       "type": "cppdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/build/${fileBasenameNoExtension}",
-      "args": [],
+      "program": "${workspaceFolder}/build/phylogenees",
+      "args": ["5", "input.txt", "-r", "0", "-d", "test2.db"],
       "stopAtEntry": false,
-      "cwd": "${fileDirname}",
+      "cwd": "${workspaceFolder}",
       "environment": [],
       "externalConsole": false,
       "MIMode": "lldb",
