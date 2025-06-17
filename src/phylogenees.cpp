@@ -66,7 +66,6 @@ int make_trees(label_size_t N, APIWrapper& db, code_t IMAX, code_t IMIN) {
         } else {
           curr_fork.degrees.insert(curr_fork.degrees.begin(), 2);
         }
-        // Check if fork is a prevailing fork
         if (check_tree(curr_fork, IMAX, IMIN)) {
           // PUSH TREE TO R*_I Vector
         }
