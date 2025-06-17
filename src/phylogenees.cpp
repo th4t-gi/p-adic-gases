@@ -61,10 +61,10 @@ void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local) {
     for (Tree fork1 : local[chain_size_1 - 1]) {
       // shifts branches for the first of the nested calls.
       Tree translated_fork_1 = fork1.translate(target_1);
-      curr_fork.append(translated_fork_1);
 
       // Look at other side of the partition
       for (Tree fork2 : local[chain_size_2 - 1]) {
+        curr_fork.append(translated_fork_1);
         // shifts branches for the second of the nested calls.
         Tree translated_fork_2 = fork2.translate(target_2);
 
@@ -100,7 +100,7 @@ void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local) {
       }
     }
   }
-  
+
   printf("The sume of the probabilities is %lf\n", sum_of_prob);
   return;
 }
