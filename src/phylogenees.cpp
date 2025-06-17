@@ -50,29 +50,29 @@ void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local) {
   for (code_t J = 0; J < elt_N - 1; J++) {
     Tree curr_fork = base_fork;
     // Grab number of bits in J and add it to the number of bits in N_max
-    label_size_t chain_size_1 = bit_length(J) + 1;
-    code_t target_1 = J + elt_N;
+    label_size_t right_chain_size = bit_length(J) + 1;
+    code_t right_target = J + elt_N;
 
     // Grab size for the rest of the partition;
-    label_size_t chain_size_2 = N - chain_size_1;
-    code_t target_2 = set_1toN - target_1;
+    label_size_t left_chain_size = N - right_chain_size;
+    code_t left_target = set_1toN - right_target;
 
     // Move through all trees with J (buddies) unioned with {N}
-    for (Tree fork1 : local[chain_size_1 - 1]) {
+    for (Tree right_fork : local[right_chain_size - 1]) {
       // shifts branches for the first of the nested calls.
-      Tree translated_fork_1 = fork1.translate(target_1);
+      Tree right_translated_fork = right_fork.translate(right_target);
 
       // Look at other side of the partition
-      for (Tree fork2 : local[chain_size_2 - 1]) {
-        curr_fork.append(translated_fork_1);
+      for (Tree left_fork : local[left_chain_size - 1]) {
+        curr_fork.append(right_translated_fork);
         // shifts branches for the second of the nested calls.
-        Tree translated_fork_2 = fork2.translate(target_2);
+        Tree left_translated_fork = left_fork.translate(left_target);
 
         Tree dup_fork = curr_fork;
         // Saving the two possible trees to DB
-        curr_fork.append(translated_fork_2, true);
-        if (translated_fork_2.degrees.size()) {
-          curr_fork.degrees.insert(curr_fork.degrees.begin(), 1 + translated_fork_2.degrees.front());
+        curr_fork.append(left_translated_fork, true);
+        if (left_translated_fork.degrees.size()) {
+          curr_fork.degrees.insert(curr_fork.degrees.begin(), 1 + left_translated_fork.degrees.front());
         } else {
           curr_fork.degrees.insert(curr_fork.degrees.begin(), 2);
         }
@@ -83,8 +83,8 @@ void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local) {
         sum_of_prob += curr_fork.probability(p);
         // trees::insert_tree(db, curr_fork);
 
-        if (chain_size_2 > 1) {
-          dup_fork.append(translated_fork_2, false);
+        if (left_chain_size > 1) {
+          dup_fork.append(left_translated_fork, false);
           dup_fork.degrees.insert(dup_fork.degrees.begin(), 2);
           // trees::insert_tree(db, dup_fork);
           local[N - 1].push_back(dup_fork);
