@@ -94,7 +94,7 @@ namespace trees
             const T& operator()() const { return id; }
           };
       };
-      using _traits = sqlpp::make_traits<sqlpp::integer, sqlpp::tag::must_not_insert, sqlpp::tag::must_not_update, sqlpp::tag::can_be_null>;
+      using _traits = sqlpp::make_traits<sqlpp::integer, sqlpp::tag::must_not_update, sqlpp::tag::can_be_null>;
     };
     struct Branches
     {
@@ -162,6 +162,76 @@ namespace trees
         T trees;
         T& operator()() { return trees; }
         const T& operator()() const { return trees; }
+      };
+    };
+  };
+  namespace Probabilities_
+  {
+    struct TreeId
+    {
+      struct _alias_t
+      {
+        static constexpr const char _literal[] =  "tree_id";
+        using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+        template<typename T>
+        struct _member_t
+          {
+            T treeId;
+            T& operator()() { return treeId; }
+            const T& operator()() const { return treeId; }
+          };
+      };
+      using _traits = sqlpp::make_traits<sqlpp::integer, sqlpp::tag::require_insert>;
+    };
+    struct Prime
+    {
+      struct _alias_t
+      {
+        static constexpr const char _literal[] =  "prime";
+        using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+        template<typename T>
+        struct _member_t
+          {
+            T prime;
+            T& operator()() { return prime; }
+            const T& operator()() const { return prime; }
+          };
+      };
+      using _traits = sqlpp::make_traits<sqlpp::integer, sqlpp::tag::require_insert>;
+    };
+    struct Probability
+    {
+      struct _alias_t
+      {
+        static constexpr const char _literal[] =  "probability";
+        using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+        template<typename T>
+        struct _member_t
+          {
+            T probability;
+            T& operator()() { return probability; }
+            const T& operator()() const { return probability; }
+          };
+      };
+      using _traits = sqlpp::make_traits<sqlpp::floating_point, sqlpp::tag::can_be_null>;
+    };
+  } // namespace Probabilities_
+
+  struct Probabilities: sqlpp::table_t<Probabilities,
+               Probabilities_::TreeId,
+               Probabilities_::Prime,
+               Probabilities_::Probability>
+  {
+    struct _alias_t
+    {
+      static constexpr const char _literal[] =  "probabilities";
+      using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+      template<typename T>
+      struct _member_t
+      {
+        T probabilities;
+        T& operator()() { return probabilities; }
+        const T& operator()() const { return probabilities; }
       };
     };
   };

@@ -10,3 +10,13 @@ branches JSON NOT NULL,
 degrees JSON NOT NULL,
 label_size INTEGER NOT NULL DEFAULT 0
 );
+
+
+CREATE TABLE IF NOT EXISTS probabilities (
+  tree_id INTEGER NOT NULL, 
+  prime INTEGER NOT NULL,
+  probability REAL DEFAULT 0,
+
+  PRIMARY KEY(tree_id, prime),
+  FOREIGN KEY(tree_id) REFERENCES trees(id)
+);
