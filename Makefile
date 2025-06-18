@@ -3,7 +3,7 @@ CXXFLAGS := -std=c++20 -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE
 INCLUDES_FLAGS := -lsqlite3 -L/opt/homebrew/lib -lboost_program_options -lfmt
 
 
-EXEC := phylogenees #partitions blocks translate
+EXEC := phylogenees probabilities translate
 DEPS := utils api tree logger
 
 # Set DEBUG=1 to enable debug info, otherwise no debug info
