@@ -49,12 +49,20 @@ void Tree::addDegrees(Tree& tree) {}
 std::string Tree::to_string(bool binary) const {
   std::string result = "[";
   bool comma = false;
+  bool hasDeg = degrees.size() > 0;
+
   for (int i = 0; i < branches.size(); i++) {
     auto b = branches[i];
-    auto d = degrees[i];
     if (comma) result += ", ";
     comma = true;
-    result += "\033[1m" + (binary ? std::bitset<8>(b).to_string() : std::to_string(b)) + "\033[0m:" + std::to_string(d);
+
+    if (hasDeg) {
+      auto d = degrees[i];
+      result +=
+        "\033[1m" + (binary ? std::bitset<8>(b).to_string() : std::to_string(b)) + "\033[0m:" + std::to_string(d);
+    } else {
+      result += (binary ? std::bitset<8>(b).to_string() : std::to_string(b));
+    }
   }
   result += "]";
 
