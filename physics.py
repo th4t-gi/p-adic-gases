@@ -4,7 +4,8 @@ import sqlite3
 import pandas as pd
 import numpy as np
 import ast
-from utils import interaction_energy, term
+import math
+from utils import interaction_energy, term, weight
 import matplotlib.pyplot as plt
 import matplotlib.widgets as mwidgets
 from matplotlib.animation import FuncAnimation
@@ -13,7 +14,7 @@ from matplotlib.animation import FuncAnimation
 primes = [7]
 # input("what prime do you want to see")
 beta_resolution = 100 # resolution (number of points, so 1 more than the number of gaps)
-set_charges = [1,-1,1,-1,1,-1]
+set_charges = [1,-1,1,-1]
 n = len(set_charges)
 
 # calculates interaction energies and sigmas 
@@ -26,7 +27,7 @@ beta_vals, beta_step = np.linspace(-sig_plus, sig_minus, beta_resolution + 1, re
 beta_vals = beta_vals[1:-1]
 
 # print(len(beta_vals))
-beta_vals = beta_vals[-(beta_resolution//10):]
+# beta_vals = beta_vals[-(beta_resolution//10):]
 
 
 prob_figs = []
@@ -34,6 +35,12 @@ Zfig, Zax = plt.subplots()
 Zax.set_xlabel(r'$\beta$')
 Zax.set_ylabel(r'$Z_I(\beta)$')
 Zax.set_title(f'Partition Function $Z_I(\\beta)$ vs $\\beta$\n(N={n}, q={set_charges}, step={beta_step:.3f})')
+
+Efig, Eax = plt.subplots()
+Eax.set_xlabel(r'$\beta$')
+Eax.set_ylabel(r'${\langle E \rangle}_\beta$')
+Eax.set_title(f'Expected value vs $\\beta$\n(N={n}, q={set_charges}, step={beta_step:.3f})')
+
 
 for p in primes:
     # create connection
@@ -67,6 +74,7 @@ for p in primes:
     
     # initializes things to graph
     Z_i = []
+    expected = []
     df_arr: List[pd.DataFrame] = []
     
     # Computes Z_I(\beta) and P_tree(p, \beta) for all betas
@@ -79,7 +87,7 @@ for p in primes:
         })
         
         # Computes product value for each tree and stores in df_beta
-        df_beta["terms"] = df.apply(lambda row : term(row["branches"], row["degrees"], p, beta, energies), axis=1)
+        df_beta["terms"] = df.apply(lambda row : term(row["branches"], row["degrees"], p, energies, beta), axis=1)
         #calculates sum and Z_I(\beta)
         total = sum(df_beta["terms"])
         Z_i_beta = (p ** (energies[-1]*beta)) * total
@@ -87,8 +95,13 @@ for p in primes:
         #computes probability for all trees
         df_beta['phys_prob'] = df_beta['terms']/total
         
+        weights = df.apply(lambda row : weight(row["branches"], row["degrees"], p, energies, beta), axis=1)
+        print(weights.head())
+        expected_beta = math.log(p) * (-energies[-1] + sum(df_beta["phys_prob"]*weights))
+        
         df_arr.append(df_beta)
         Z_i.append(Z_i_beta)
+        expected.append(expected_beta)
         
         # print(f"beta: {beta}, Z_I = {Z_i_beta}\n", df_beta.head(), "\n--------\n")
     
@@ -157,9 +170,11 @@ for p in primes:
     prob_figs.append(fig)
     # Plot Z_i vs beta for this prime
     Zax.plot(beta_vals, Z_i, label=f"p={p}")
+    Eax.plot(beta_vals, expected, label=f"p={p}")
 
 Zax.legend(title="Prime p")
-
+Eax.legend(title="Prime p")
+Zax.set_yscale("log")
 # for fig in figs:
 #         # Save animation after showing interactive plot
 #     # save = input("Do you want to save this as a .mp4? (y/n) ")
