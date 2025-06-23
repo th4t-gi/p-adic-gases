@@ -12,6 +12,7 @@
 !.vscode
 !.vscode/**
 !ddl.txt
+!*.py
 
 # exclude all these:
 **/.DS_Store
