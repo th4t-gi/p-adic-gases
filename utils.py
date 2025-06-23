@@ -7,21 +7,22 @@ def falling_factorial(x,n):
         prod *= x-i
     return prod
 
+def factor(branch: int, degree: int, p: int, e_J: int, beta: float):
+    size_J = bin(branch).count("1")
+    denom = p**(size_J + (e_J * beta)) - p
+    return falling_factorial(p, degree)/denom
 
-def term(branches: List[int], degrees: List[int], p: int, beta: float, intrc_enrgy_array: List[float]):
-    # branch_arr = branches.apply(lambda b: list(map(int, b[1:-1].split(","))))
-    # branch_arr = list(map(int, branches[1:-1].split(",")))
-    # print(branch_arr[0])
-    #deg_arr = degrees.apply(lambda d: list(map(int, d[1:-1].split(","))))
-    # deg_arr = list(map(int, degrees[1:-1].split(",")))
+
+def weight(branches: List[int], degrees: List[int], p: int, interaction_enrgy: List[float], beta: float):
+    total = 0.0
+    for J,degree in zip(branches, degrees):
+        total += factor(J, degree, p, interaction_enrgy[J], beta)
+    return total
+
+def term(branches: List[int], degrees: List[int], p: int, interaction_enrgy: List[float], beta: float):
     out = 1.0
     for J,degree in zip(branches, degrees):
-        size_J = bin(J).count("1")
-
-        denom = p**(size_J + (beta * intrc_enrgy_array[J])) - p
-        if (denom == 0):
-          print(f"p {p}, size_J {size_J}, beta {beta} ej {intrc_enrgy_array[J]}")
-        out *= falling_factorial(p, degree)/(p**(size_J + (beta * intrc_enrgy_array[J])) - p)
+        out *= factor(J, degree, p, interaction_enrgy[J], beta)
     return out
 
 
