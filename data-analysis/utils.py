@@ -45,9 +45,9 @@ def interaction_energy(charges: List[int]):
     return out
 
 
-def query(n: int, p: int) -> pd.DataFrame:
+def query(n: int, p: int, path = ".") -> pd.DataFrame:
     # create connection
-    dbname = f"./size{n}.db"
+    dbname = f"{path}/size{n}.db"
     # print(dbname)
     con = sqlite3.connect(dbname)
     
