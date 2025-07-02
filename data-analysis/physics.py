@@ -15,11 +15,12 @@ primes = [2,3,5,7,11,13]
 beta_resolution = 1000 # resolution (number of points, so 1 more than the number of gaps)
 set_charges = [1,-1,1,-1]
 n = len(set_charges)
+m = max([abs(q) for q in set_charges])
 
 # calculates interaction energies and sigmas 
 energies = interaction_energy(set_charges)
-sig_plus = 4/n
-sig_minus = 1.0
+sig_plus = 0.1
+sig_minus = 2/(m+1)
 #caluclates array of values with given beta_resolution between (-\sigma^+, \sigma^-)
 beta_vals, beta_step = np.linspace(-sig_plus, sig_minus, beta_resolution + 1, retstep=True)
 #excludes endpoints
@@ -45,7 +46,7 @@ Eax.set_yscale("symlog")
 
 
 for p in primes:
-    df = query(n, p)
+    df = query(n, p, "..")
 
     # do some formatting as arrays
     df["branches"] = df["branches"].apply(ast.literal_eval)
