@@ -4,7 +4,8 @@ import pandas as pd
 import numpy as np
 import ast
 import math
-from utils import interaction_energy, term, weight, query
+from utils import interaction_energy, term, weight, query, double_weight
+from tree_prob import TreePlt
 import matplotlib.pyplot as plt
 import matplotlib.widgets as mwidgets
 from matplotlib.animation import FuncAnimation
@@ -12,164 +13,178 @@ from matplotlib.animation import FuncAnimation
 # primes = [7] # primes to compute probabilities for
 primes = [2,3,5,7,11,13]
 # input("what prime do you want to see")
-beta_resolution = 1000 # resolution (number of points, so 1 more than the number of gaps)
-set_charges = [1,-1,1,-1]
+beta_step = 0.01
+set_charges = [1, -1, 1, -1]
 n = len(set_charges)
-m = max([abs(q) for q in set_charges])
+m = max(set_charges)
+k = min(set_charges)
 
-# calculates interaction energies and sigmas 
+# calculates interaction energies and sigmas
 energies = interaction_energy(set_charges)
+sig_minus = 1/(m*(-k))
 sig_plus = 0.1
-sig_minus = 2/(m+1)
-#caluclates array of values with given beta_resolution between (-\sigma^+, \sigma^-)
-beta_vals, beta_step = np.linspace(-sig_plus, sig_minus, beta_resolution + 1, retstep=True)
-#excludes endpoints
-beta_vals = beta_vals[1:-1]
+# caluclates array of values with given beta_step between (-\sigma^+, \sigma^-)
+beta_vals = np.arange(-sig_plus, sig_minus, beta_step)
+# excludes endpoints
+beta_vals = beta_vals[1:]
 
-# print(len(beta_vals))
-# beta_vals = [val for ]
+# for b in beta_vals:
+#     print(b)
+# print("e_Js = ", energies)
+# print("----")
+# enum_energies = [(J, e) for J, e in enumerate(energies) if e < 0]
+# for tup in np.array(enum_energies).tolist():
+#     print(tup)
+# # print("----")
+# sig_minus_list = [(bin(J).count("1") - 1)/abs(e) for J, e in enum_energies]
+# print(min(sig_minus_list))
+# print([round(num, 3) for num in np.array(sig_minus_list).tolist()])
+
+def compute(charges: List[int], primes: List[int], beta_vals, trees: pd.DataFrame):
+    energies = interaction_energy(charges)
+    df_arr = []
+
+    # Computes Z_I(\beta), Expected value, Variance, and P_tree(p, \beta) for all betas
+    for p in primes:
+        trees_p = trees.loc[p]
+        for beta in beta_vals:
+            # computes probability for all trees
+            terms = trees_p.apply(lambda row: term(
+                row["branches"], row["degrees"], p, energies, beta), axis=1)
+            total = terms.sum()
+            probs = terms/total
+
+            # computes weights and double weights for expected value and variance
+            weights = trees_p.apply(lambda row: weight(
+                row["branches"], p, energies, beta), axis=1)
+            double_weights = trees_p.apply(lambda row: double_weight(
+                row["branches"], p, energies, beta), axis=1)
+
+            df_beta = pd.DataFrame({
+                'prime': p,
+                'beta': beta,
+                'tree_id': trees_p.index,
+                'term': terms,
+                'phys_prob': probs,
+                'weight': weights,
+                'double_weight': double_weights,
+            })
+
+            df_arr.append(df_beta)
+
+    # Concatenate all per-beta DataFrames, set index as (beta, tree_id)
+    return pd.concat(df_arr).set_index(['prime', 'beta', 'tree_id'])
+
+def canonical_partition_plt(df: pd.DataFrame):
+    Zfig, Zax = plt.subplots()
+
+    for p in df.index.get_level_values("prime").unique():
+        Z_i = []
+        for beta in beta_vals:
+            total = df["term"][(p, beta)].sum()
+
+            # calculates Z_I(\beta)
+            Z_i_beta = (p ** (energies[-1]*beta)) * total
+            Z_i.append(Z_i_beta)
+
+        Zax.plot(beta_vals, Z_i, label=f"p={p}")
+
+    Zax.set_xlabel(r'$\beta$')
+    Zax.set_ylabel(r'$Z_I(\beta)$')
+    Zax.set_title(
+        f'Partition Function $Z_I(\\beta)$\n(N={n}, q={set_charges}, step={beta_step:.4f})')
+    Zfig.canvas.manager.set_window_title(f"Z_I(β)")
+    Zax.set_yscale("log")
+    Zax.legend(title="Prime p")
+
+    return Zfig
+
+def expected_val_plt(df: pd.DataFrame):
+    Efig, Eax = plt.subplots()
+
+    for p in df.index.get_level_values("prime").unique():
+        expected = []
+        for beta in beta_vals:
+            probs = df["phys_prob"][(p, beta)]
+            weights = df["weight"][(p, beta)]
+
+            # calculates <E>
+            expected_beta = math.log(p) * (-energies[-1] + sum(probs*weights))
+            expected.append(expected_beta)
+
+        Eax.plot(beta_vals, expected, label=f"p={p}")
+
+    Eax.set_xlabel(r'$\beta$')
+    Eax.set_ylabel(r'${\langle E \rangle}_\beta$')
+    Eax.set_title(
+        f'Expected value vs $\\beta$\n(N={n}, q={set_charges}, step={beta_step:.4f})')
+    Efig.canvas.manager.set_window_title("<E>_β")
+    Eax.set_yscale("symlog")
+    Eax.legend(title="Prime p")
+
+    return Efig
+
+def variance_plt(df: pd.DataFrame):
+    Vfig, Vax = plt.subplots()
+
+    for p in df.index.get_level_values("prime").unique():
+        variance = []
+        for beta in beta_vals:
+            probs = df["phys_prob"][(p,beta)]
+            weights = df["weight"][(p, beta)]
+            double_weights = df["double_weight"][(p, beta)]
+
+            # calculates <<E>^2>
+            variance_beta = (math.log(p)**2) * (sum(double_weights * probs) +
+                                                sum((weights**2)*probs) -
+                                                (sum(weights*probs)**2))
+            variance.append(variance_beta)
+
+        Vax.plot(beta_vals, variance, label=f"p={p}")
+
+    Vax.set_xlabel(r'$\beta$')
+    Vax.set_ylabel(r'${\langle{\langle E \rangle}^2\rangle}_\beta$')
+    Vax.set_title(
+        f'Variance of expected value vs $\\beta$\n(N={n}, q={set_charges}, step={beta_step:.4f})')
+    Vfig.canvas.manager.set_window_title("<<E>^2>")
+    # Vax.set_yscale("log")
+    Vax.legend(title="Prime p")
+
+    return Vfig
 
 
-prob_figs = []
-Zfig, Zax = plt.subplots()
-Zax.set_xlabel(r'$\beta$')
-Zax.set_ylabel(r'$Z_I(\beta)$')
-Zax.set_title(f'Partition Function $Z_I(\\beta)$\n(N={n}, q={set_charges}, step={beta_step:.4f})')
-Zfig.canvas.manager.set_window_title(f"Z_I(β)")
+prob_figs: List[TreePlt] = []
 
-Efig, Eax = plt.subplots()
-Eax.set_xlabel(r'$\beta$')
-Eax.set_ylabel(r'${\langle E \rangle}_\beta$')
-Eax.set_title(f'Expected value vs $\\beta$\n(N={n}, q={set_charges}, step={beta_step:.4f})')
-Efig.canvas.manager.set_window_title("<E>_β")
-Eax.set_yscale("symlog")
+trees = query(n, primes, "..")
+trees["branches"] = trees["branches"].apply(ast.literal_eval)
+trees["degrees"] = trees["degrees"].apply(ast.literal_eval)
 
+df = compute(set_charges, primes, beta_vals, trees)
+print(len(df))
+
+Zfig = canonical_partition_plt(df)
+Efig = expected_val_plt(df)
+Vfig = variance_plt(df)
+
+prob_plt = TreePlt(df, set_charges, beta_step, sig_plus, sig_minus, beta_vals, split=False)
 
 for p in primes:
-    df = query(n, p, "..")
+    print(f"------------{p}------------")
 
     # do some formatting as arrays
-    df["branches"] = df["branches"].apply(ast.literal_eval)
-    df["degrees"] = df["degrees"].apply(ast.literal_eval)
-    
-    # initializes things to graph
-    Z_i = []
-    expected = []
-    df_arr: List[pd.DataFrame] = []
-    
-    # Computes Z_I(\beta), Expected value, and P_tree(p, \beta) for all betas
-    for i, beta in enumerate(beta_vals):
+    prob_plt.plot(p)
 
-        df_beta = pd.DataFrame({
-            'tree_id': df['id'],
-            'terms': 0.0,
-            'phys_prob': 0
-        })
-        
-        # Computes product value for each tree and stores in df_beta
-        df_beta["terms"] = df.apply(lambda row : term(row["branches"], row["degrees"], p, energies, beta), axis=1)
-        #calculates sum and Z_I(\beta)
-        total = sum(df_beta["terms"])
-        Z_i_beta = (p ** (energies[-1]*beta)) * total
-        Z_i.append(Z_i_beta)
-
-        #computes probability for all trees
-        df_beta['phys_prob'] = df_beta['terms']/total
-        
-        #computes expected value
-        weights = df.apply(lambda row : weight(row["branches"], p, energies, beta), axis=1)
-        expected_beta = math.log(p) * (-energies[-1] + sum(df_beta["phys_prob"]*weights))
-        expected.append(expected_beta)
-
-        df_arr.append(df_beta)
-        
-        # print(f"beta: {beta}, Z_I = {Z_i_beta}\n", df_beta.head(), "\n--------\n")
-    
-    # Set up probability plot with slider
-    fig, ax = plt.subplots(figsize=(7, 4.5))
-    plt.subplots_adjust(bottom=0.4)
-    ax.set_xlabel('Tree ID (row index)')
-    ax.set_ylabel('Probability')
-    ax.set_title(f'Physical Probability of Trees\n(N={n}, q={set_charges}, p={p}, step={beta_step:.4f})')
-    fig.canvas.manager.set_window_title(f"P={p}")
-    # ax.set_ybound(upper=1.0)
-    ax.set_ylim(top=0.5)
-    # ax.set_yscale("log")
-    plt.xticks(rotation=90)
-    
-    start = 0
-    # end = len(df_arr[0])
-    end = 900
-    
-    # trees = [81, 83, 847, 849]
-
-    # Create x-axis labels and probabilities array
-    all_phys_probs = [frame["phys_prob"].values for frame in df_arr]
-    xlabels = [f"{tid} ({idx})" for tid, idx in zip(df['id'][start:end], df.index[start:end])]
-    bar_container = ax.bar(xlabels, all_phys_probs[0][start:end])
-
-    # beta slider
-    ax_slider = plt.axes([0.15, 0.02, 0.7, 0.02])# left,bottom,width,height
-    beta_slider = mwidgets.Slider(
-        ax=ax_slider,
-        label=r'$\beta$',
-        valmin=beta_vals[0],
-        valmax=beta_vals[-1],
-        valinit=0,
-        valstep=beta_vals
-    )
-
-    def update(val):
-        idx = np.where(beta_vals == beta_slider.val)[0][0]
-        for rect, h in zip(bar_container, all_phys_probs[idx][start:end]):
-            rect.set_height(h)
-        fig.canvas.draw_idle()
-
-    beta_slider.on_changed(update)
-    update(0)
-
-    def save_beta_animation(fig, ax, bar_container, all_phys_probs, beta_vals, filename="beta_animation.mp4"):
-        """
-        Save an animation of the bar plot as beta varies.
-        """
-        def animate(i):
-            # reindex i to start at beta = 0
-            i = (i + (len(beta_vals) // 2)) % len(beta_vals)
-            for rect, h in zip(bar_container, all_phys_probs[i]):
-                rect.set_height(h)
-            # ax.set_title(f'Physical Probability of Trees (β={beta_vals[i]:.3f})')
-            beta_slider.set_val(beta_vals[i])
-            return bar_container
-
-        anim = FuncAnimation(
-            fig, animate, frames=len(beta_vals), interval=100, blit=False, repeat=False
-        )
-        print(f"Saving animation to {filename}...")
-        anim.save(filename, writer='ffmpeg')
-        print(f"Animation saved to {filename}")
-        
-    save = "n"
-    if (save.lower() == "y"):
-        save_beta_animation(fig, ax, bar_container, all_phys_probs, beta_vals, filename=f'animations/prob_p{p}_n{n}_b{beta_step}.mp4')
-
-    plt.tight_layout(pad=3.0)
-    prob_figs.append(fig)
-    # Plot Z_i vs beta for this prime
-    Zax.plot(beta_vals, Z_i, label=f"p={p}")
-    Eax.plot(beta_vals, expected, label=f"p={p}")
-
-Zax.legend(title="Prime p")
-Eax.legend(title="Prime p")
-Zax.set_yscale("log")
-
-
-        
-# for fig in figs:
-#         # Save animation after showing interactive plot
+prob_plt2 = TreePlt(df, set_charges, beta_step, sig_plus,
+                   sig_minus, beta_vals, split=False)
+prob_plt2.plot(2)
+prob_plt2.plot(3)
+# for prob in prob_figs:
+#      # Save animation after showing interactive plot
 #     # save = input("Do you want to save this as a .mp4? (y/n) ")
 #     save = "n"
 #     if (save.lower() == "y"):
-#         save_beta_animation(fig, ax, bar_container, all_phys_probs, beta_vals, filename=f'animations/prob_p{p}_n{n}_b{beta_step}.mp4')
+#         prob.save_beta_animation(
+#             filename=f'../animations/prob_p{p}_n{n}_q{set_charges}_b{beta_step}.mp4')
+
 
 plt.show()
-
