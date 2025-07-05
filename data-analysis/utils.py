@@ -21,7 +21,19 @@ def weight(branches: List[int], p: int, energies: List[float], beta: float):
         size_J = bin(J).count("1")
         e_J = energies[J]
         
-        factor = e_J/(1-p**(1-size_J - e_J*beta))
+        factor = e_J/(1-p**(1-size_J - (e_J*beta)))
+        total += factor
+    return total
+
+
+def double_weight(branches: List[int], p: int, energies: List[float], beta: float):
+    total = 0.0
+    for J in branches:
+        size_J = bin(J).count("1")
+        e_J = energies[J]
+        power = p**(1-size_J - (e_J*beta))
+
+        factor = power*((e_J/(1-power))**2)
         total += factor
     return total
 
@@ -45,7 +57,7 @@ def interaction_energy(charges: List[int]):
     return out
 
 
-def query(n: int, p: int, path = ".") -> pd.DataFrame:
+def query(n: int, primes: List[int], path = ".") -> pd.DataFrame:
     # create connection
     dbname = f"{path}/size{n}.db"
     # print(dbname)
@@ -60,11 +72,9 @@ def query(n: int, p: int, path = ".") -> pd.DataFrame:
         JOIN
             trees ON probabilities.tree_id = trees.id
         WHERE
-            probabilities.prime = {p}
-        ORDER BY
-            probabilities.probability DESC
+            probabilities.prime IN ({','.join(map(str, primes))})
     """
-    df = pd.read_sql_query(query, con)
+    df = pd.read_sql_query(query, con).set_index(["prime","id"])
     con.close()
     
     return df
