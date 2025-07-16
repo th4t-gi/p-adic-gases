@@ -11,34 +11,87 @@ import matplotlib.widgets as mwidgets
 from matplotlib.animation import FuncAnimation
 
 # primes = [7] # primes to compute probabilities for
-primes = [2,3,5,7,11,13]
+primes = [2,3,5]
 # input("what prime do you want to see")
 beta_step = 0.01
-set_charges = [1, -1, 1, -1]
+set_charges = [1,1,-1,-1]
+# set_charges.sort()
 n = len(set_charges)
-m = max(set_charges)
-k = min(set_charges)
+m_plus = max(set_charges)
+m_minus = min(set_charges)    
 
 # calculates interaction energies and sigmas
 energies = interaction_energy(set_charges)
-sig_minus = 1/(m*(-k))
-sig_plus = 0.1
+sig_minus = 1/abs(m_plus*m_minus)
+if m_plus*m_minus >= 0:
+    sig_minus = 5
+sig_plus = 0 + beta_step
 # caluclates array of values with given beta_step between (-\sigma^+, \sigma^-)
 beta_vals = np.arange(-sig_plus, sig_minus, beta_step)
 # excludes endpoints
 beta_vals = beta_vals[1:]
 
-# for b in beta_vals:
-#     print(b)
-# print("e_Js = ", energies)
-# print("----")
-# enum_energies = [(J, e) for J, e in enumerate(energies) if e < 0]
+print("e_Js = ", energies)
+print("----")
+
+sizes = [bin(J).count("1") for J in range(len(energies))]
+
+# df_e = pd.DataFrame({
+#     # "index": range(len(energies)),
+#     "sizes": sizes,
+#     "energies": energies
+# })
+
+# df_e["quant"] = (df_e["sizes"]-1)/df_e["energies"].abs()
+
+# # print(energies[21])
+# # print(df_e["quant"][[21,42]])
+
+# # df_e.plot.scatter(
+# #     x=df_e.index,
+# #     # x='index',
+# #     y="energies",
+# #     s="sizes"
+# # )
+
+# fig,ax = plt.subplots()
+
+# df_filtered = df_e.loc[(df_e["energies"] < 0)]
+
+# scatter = ax.scatter(
+#     x=df_filtered.index,
+#     y=(df_filtered["sizes"]-1)/df_filtered["energies"].abs(),
+#     s=8*(df_filtered["sizes"]**2),
+#     c=df_filtered["sizes"],
+#     cmap="gist_rainbow_r"
+# )
+
+# ax.set_xlabel(r"$J\subseteq I$")
+# ax.set_ylabel(r"$\frac{|J|-1}{|e_J|}$", rotation=0, labelpad=20)
+# ax.set_title(f"Quantity to minimize for each J subset of I\n(q={set_charges})")
+
+# handles, labels = scatter.legend_elements(prop="colors")
+# max_size = df_filtered["sizes"].max()
+# min_size = df_filtered["sizes"].min()
+
+# legend2 = ax.legend(handles, range(min_size, max_size+1), title="Size of J")
+
+# ax.set_xticks(range(len(energies)))``
+# ax.set_xticklabels(range(len(energies)))
+
+# plt.show()
+# enum_energies = [(bin(J).count("1"), e) for J, e in enumerate(energies) if e < 0]
 # for tup in np.array(enum_energies).tolist():
 #     print(tup)
 # # print("----")
-# sig_minus_list = [(bin(J).count("1") - 1)/abs(e) for J, e in enum_energies]
-# print(min(sig_minus_list))
+# sig_minus_list = [(size-1)/abs(e) for size, e in enum_energies]
+# print(sig_minus_list)
 # print([round(num, 3) for num in np.array(sig_minus_list).tolist()])
+
+
+
+
+
 
 def compute(charges: List[int], primes: List[int], beta_vals, trees: pd.DataFrame):
     energies = interaction_energy(charges)
@@ -153,38 +206,40 @@ def variance_plt(df: pd.DataFrame):
     return Vfig
 
 
-prob_figs: List[TreePlt] = []
-
 trees = query(n, primes, "..")
 trees["branches"] = trees["branches"].apply(ast.literal_eval)
 trees["degrees"] = trees["degrees"].apply(ast.literal_eval)
 
 df = compute(set_charges, primes, beta_vals, trees)
+
+tree_ids = df.index.get_level_values('tree_id').unique()
+df.index = df.index.set_levels([range(1,len(tree_ids)+1) if name == 'tree_id' else df.index.levels[i]
+                          for i, name in enumerate(df.index.names)])
+
 print(len(df))
+print(df.head())
+# Zfig = canonical_partition_plt(df)
+# Efig = expected_val_plt(df)
+# Vfig = variance_plt(df)
 
-Zfig = canonical_partition_plt(df)
-Efig = expected_val_plt(df)
-Vfig = variance_plt(df)
+prob_figs: List[TreePlt] = []
+prob_plt = TreePlt(df, primes, set_charges, beta_step, subplots=True)
+prob_figs.append(prob_plt)
+prob_plt.plot()
 
-prob_plt = TreePlt(df, set_charges, beta_step, sig_plus, sig_minus, beta_vals, split=False)
+# for p in primes:
+#     print(f"------------{p}------------")
 
-for p in primes:
-    print(f"------------{p}------------")
-
-    # do some formatting as arrays
-    prob_plt.plot(p)
-
-prob_plt2 = TreePlt(df, set_charges, beta_step, sig_plus,
-                   sig_minus, beta_vals, split=False)
-prob_plt2.plot(2)
-prob_plt2.plot(3)
-# for prob in prob_figs:
-#      # Save animation after showing interactive plot
-#     # save = input("Do you want to save this as a .mp4? (y/n) ")
-#     save = "n"
-#     if (save.lower() == "y"):
-#         prob.save_beta_animation(
-#             filename=f'../animations/prob_p{p}_n{n}_q{set_charges}_b{beta_step}.mp4')
-
+#     prob_plt.plot(p)
 
 plt.show()
+
+prob_plt.fig.savefig("prob1.png", bbox_inches='tight', dpi=300)
+
+for prob in prob_figs:
+     # Save animation after showing interactive plot
+    # save = input(f"Do you want to save \"{prob}\"? (y/n) ")
+    save = "n"
+    if (save.lower() == "y"):
+        prob.save_beta_animation()
+
