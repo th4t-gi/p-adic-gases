@@ -5,6 +5,8 @@ import networkx as nx
 import pygraphviz as pgv
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+import numpy as np
+
 from random import randint
 from typing import List
 
@@ -14,13 +16,13 @@ trees = query(N, [2], '..').loc[2]
 trees["branches"] = trees["branches"].apply(ast.literal_eval)
 trees["degrees"] = trees["degrees"].apply(ast.literal_eval)
 
-trees.index = range(1, trees.index.size+1)
+# trees.index = range(1, trees.index.size+1)
 
-# i_min = trees.index.min()
-# i_max = trees.index.max()
-# idxs = [randint(i_min, i_max) for _ in range(3)]
-# trees = trees.loc[idxs]
-# trees = trees.loc[[9, 12,16]]
+i_min = trees.index.min()
+i_max = trees.index.max()
+idxs = [randint(i_min, i_max) for _ in range(3)]
+trees = trees.loc[idxs]
+# trees = trees.loc[[2338,1593, 1444]]
 
 
 def branches_to_prufer_seq(N: int, branches: List[int]) -> List[int]:
@@ -42,14 +44,19 @@ def branches_to_prufer_seq(N: int, branches: List[int]) -> List[int]:
                 if J & branch and J < branch:
                     prufer_seq[i + N] = j
 
-        #turns sequence of branch indecies into node labels (since leaves are nodes 0 to N-1)
+        # turns sequence of branch indecies into node labels (since leaves are nodes 0 to N-1)
         prufer_seq = [node_len - i - 1 for i in prufer_seq]
 
     return prufer_seq
 
 
 def get_tree_pos(G: pgv.AGraph):
-    # Extract node positions from AGraph
+    N = 0
+    for node in G.nodes():
+        if G.degree(node) == 1:
+            N += 1
+
+    # get positions from graph
     pos = {}
     for n in G.nodes():
         p = n.attr['pos']
@@ -57,17 +64,30 @@ def get_tree_pos(G: pgv.AGraph):
             x, y = map(float, p.split(','))
             pos[int(n.get_name())] = (x, y)
 
-    for n in G.nodes():
-        leaves = ast.literal_eval(n.attr["leaves"]) if len(n.attr["leaves"]) else []
+    nodes = G.nodes()
+    nodes.sort(key=int)
+
+    node_y = [y for k, (x, y) in pos.items()]
+    y_levels = np.linspace(min(node_y), max(node_y), N)
+    for n in nodes:
+        # children = [int(node.name) for node in G.neighbors(n) if int(node.name) < int(n.name)]
+        # if len(children):
+        #     children_x = [pos[c][0] for c in children]
+        #     # weights =
+        #     new_x = sum(children_x)/len(children_x)
+        #     pos[int(n)] = (new_x, pos[int(n)][1])
+
+        leaves = ast.literal_eval(n.attr["leaves"]) if len(
+            n.attr["leaves"]) else []
         leaves = [l-1 for l in leaves]
         if len(leaves):
             leave_x = [pos[l][0] for l in leaves]
             new_x = (max(leave_x)+min(leave_x))/2
-            pos[int(n)] = (new_x, pos[int(n)][1])
+            new_y = int(y_levels[len(leaves)-1])
+
+            pos[int(n)] = (new_x, new_y)
 
     return pos
-
-    
 
 
 def label_set(branch: int, N: int):
@@ -77,24 +97,26 @@ def label_set(branch: int, N: int):
             labels.append(i+1)
     return labels
 
-tree_img_dir = "./trees2/"
+
+tree_img_dir = "./trees4/"
 
 for i, tree in trees.iterrows():
-    # filename = f"tree_{tree.name}"
-    filename= "temp"
+    filename = f"tree_{tree.name}"
+    # filename= "temp"
     imgpath = tree_img_dir + filename + ".png"
     print(imgpath)
 
     branches = tree["branches"]
     prufer_seq = branches_to_prufer_seq(N, branches)
-    
+
     print(branches, ":", prufer_seq)
 
     T = nx.from_prufer_sequence(prufer_seq)
     for i, J in enumerate(reversed(branches)):
         T.nodes[N+i]["branch"] = str(J)
-        
-        T.nodes[N+i]["set"] = "\{" + ",".join([f"x_{i}" for i in label_set(J, N)]) + "\}"
+
+        T.nodes[N+i]["set"] = "\{" + ",".join(map(str, label_set(J, N))) + "\}"
+        # T.nodes[N+i]["set"] = "\{" + ",".join([f"x_{i}" for i in label_set(J, N)]) + "\}"
         T.nodes[N+i]["leaves"] = label_set(J, N)
 
     root = max(list(T.nodes()))
@@ -103,14 +125,19 @@ for i, tree in trees.iterrows():
 
     A: pgv.AGraph = nx.nx_agraph.to_agraph(T)
     A.add_subgraph(leave_ids, rank='same')
-    A.layout(prog='dot', args='-Grank=BT')
-    
+    A.layout(prog='dot', args='-y')
+
     pos = get_tree_pos(A)
 
     # --- NetworkX drawing section ---
-    fig, ax = plt.subplots(figsize=(4, 4))
-    # plt.rc('text', usetex=True)
+    plt.rcParams.update({
+        "text.usetex": True,
+        "text.latex.preamble": r"""\boldmath
+\usepackage[dvipsnames]{xcolor}
+\renewcommand{\familydefault}{\sfdefault}"""
+    })
 
+    fig, ax = plt.subplots(figsize=(8, 4))
     # ax.set_aspect('equal')
     ax.axis('off')
 
@@ -125,6 +152,7 @@ for i, tree in trees.iterrows():
             node_sizes.append(300)
             node_colors.append('white')
             node_fontsizes.append(20)
+            # node_fontsizes.append(36)
         else:
             node_labels[n] = T.nodes[n]['set']
             node_sizes.append(0)
@@ -144,36 +172,36 @@ for i, tree in trees.iterrows():
     )
 
     # Draw labels
-    # colors = ["red", "orange", "brown",
-    #           "teal", "blue", "magenta"]
-    # color_i = 0
+    colors = ["#ED1B23", "#F58137", "#bf803f",
+              "#008080", "#00AEEF", "#EC008C"]
+    color_i = 0
     for n in T.nodes():
         if n in leave_ids:
             ax.text(
                 pos[n][0], pos[n][1],
-                node_labels[n],
-                # f"$x_{node_labels[n]}$",
+                f"${node_labels[n]}$",
                 fontsize=node_fontsizes[n],
                 ha='center',
                 va='top',
                 # color=colors[color_i]
             )
-        # else:
-        #     t = ax.text(
-        #         apos[n][0],
-        #         apos[n][1],
-        #         f"${node_labels[n]}$",
-        #         va='center',
-        #         ha='center',
-        #         fontsize=node_fontsizes[n]
-        #     )
-        #     t.set_bbox(dict(facecolor='white'))
-        
-        # color_i += 1
+        else:
+            pass
+            # t = ax.text(
+            #     pos[n][0],
+            #     pos[n][1],
+            #     f"${node_labels[n]}$",
+            #     va='center',
+            #     ha='center',
+            #     fontsize=node_fontsizes[n]
+            # )
+            # t.set_bbox(dict(facecolor='white'))
+
+        color_i += 1
 
     # Draw title
-    plt.title(f"{tree.name}", fontsize=30, fontweight="bold", loc='left')
+    ax.set_title(f"\\textbf{{{tree.name}}}", fontsize=56, loc='left')
 
-    plt.tight_layout(pad=1)
-    plt.savefig(imgpath, pad_inches=0, dpi=300)
+    plt.tight_layout(pad=.5)
+    plt.savefig(imgpath, pad_inches=.5, dpi=300)
     plt.show()

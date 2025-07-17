@@ -11,19 +11,19 @@ import matplotlib.widgets as mwidgets
 from matplotlib.animation import FuncAnimation
 
 # primes = [7] # primes to compute probabilities for
-primes = [2,3,5]
+primes = [2,3,5,7,11]
 # input("what prime do you want to see")
 beta_step = 0.01
 set_charges = [1,1,-1,-1]
 # set_charges.sort()
 n = len(set_charges)
-m_plus = max(set_charges)
-m_minus = min(set_charges)    
+q_max = max(set_charges)
+q_min = min(set_charges)
 
 # calculates interaction energies and sigmas
 energies = interaction_energy(set_charges)
-sig_minus = 1/abs(m_plus*m_minus)
-if m_plus*m_minus >= 0:
+sig_minus = 1/abs(q_max*q_min)
+if q_max*q_min >= 0:
     sig_minus = 5
 sig_plus = 0 + beta_step
 # caluclates array of values with given beta_step between (-\sigma^+, \sigma^-)
@@ -129,7 +129,13 @@ def compute(charges: List[int], primes: List[int], beta_vals, trees: pd.DataFram
     return pd.concat(df_arr).set_index(['prime', 'beta', 'tree_id'])
 
 def canonical_partition_plt(df: pd.DataFrame):
-    Zfig, Zax = plt.subplots()
+    # --- NetworkX drawing section ---
+    plt.rcParams.update({
+        "text.usetex": True,
+        "text.latex.preamble": r"""\usepackage{lmodern}\renewcommand{\familydefault}{\sfdefault}"""
+    })
+    
+    Zfig, Zax = plt.subplots(figsize=(8, 3))
 
     for p in df.index.get_level_values("prime").unique():
         Z_i = []
@@ -140,15 +146,18 @@ def canonical_partition_plt(df: pd.DataFrame):
             Z_i_beta = (p ** (energies[-1]*beta)) * total
             Z_i.append(Z_i_beta)
 
-        Zax.plot(beta_vals, Z_i, label=f"p={p}")
+        Zax.plot(beta_vals, Z_i, label=p)
 
-    Zax.set_xlabel(r'$\beta$')
-    Zax.set_ylabel(r'$Z_I(\beta)$')
+    Zax.set_xlabel(r'\boldmath$\beta$', fontsize=14)
+    Zax.set_ylabel(r'\boldmath$Z_I(\beta)$', fontsize=14,
+                   rotation=0, horizontalalignment="right")
     Zax.set_title(
-        f'Partition Function $Z_I(\\beta)$\n(N={n}, q={set_charges}, step={beta_step:.4f})')
-    Zfig.canvas.manager.set_window_title(f"Z_I(β)")
+        f'Canonical Partition for $q_I=({','.join(map(str, set_charges))})$', fontsize=18)
+    Zfig.canvas.manager.set_window_title(f"Z_I_beta_q{set_charges}")
     Zax.set_yscale("log")
     Zax.legend(title="Prime p")
+
+    Zfig.subplots_adjust(left=0.14, bottom=0.2, right=0.86)
 
     return Zfig
 
@@ -218,7 +227,7 @@ df.index = df.index.set_levels([range(1,len(tree_ids)+1) if name == 'tree_id' el
 
 print(len(df))
 print(df.head())
-# Zfig = canonical_partition_plt(df)
+Zfig = canonical_partition_plt(df)
 # Efig = expected_val_plt(df)
 # Vfig = variance_plt(df)
 
@@ -232,9 +241,11 @@ prob_plt.plot()
 
 #     prob_plt.plot(p)
 
-plt.show()
-
+path = f"../../plots/{Zfig.canvas.manager.get_window_title()}.png"
+Zfig.savefig(path, dpi=300)
 prob_plt.fig.savefig("prob1.png", bbox_inches='tight', dpi=300)
+
+plt.show()
 
 for prob in prob_figs:
      # Save animation after showing interactive plot
