@@ -10,89 +10,6 @@ import matplotlib.pyplot as plt
 import matplotlib.widgets as mwidgets
 from matplotlib.animation import FuncAnimation
 
-# primes = [7] # primes to compute probabilities for
-primes = [2,3,5,7,11]
-# input("what prime do you want to see")
-beta_step = 0.01
-set_charges = [1,1,-1,-1]
-# set_charges.sort()
-n = len(set_charges)
-q_max = max(set_charges)
-q_min = min(set_charges)
-
-# calculates interaction energies and sigmas
-energies = interaction_energy(set_charges)
-sig_minus = 1/abs(q_max*q_min)
-if q_max*q_min >= 0:
-    sig_minus = 5
-sig_plus = 0 + beta_step
-# caluclates array of values with given beta_step between (-\sigma^+, \sigma^-)
-beta_vals = np.arange(-sig_plus, sig_minus, beta_step)
-# excludes endpoints
-beta_vals = beta_vals[1:]
-
-print("e_Js = ", energies)
-print("----")
-
-sizes = [bin(J).count("1") for J in range(len(energies))]
-
-# df_e = pd.DataFrame({
-#     # "index": range(len(energies)),
-#     "sizes": sizes,
-#     "energies": energies
-# })
-
-# df_e["quant"] = (df_e["sizes"]-1)/df_e["energies"].abs()
-
-# # print(energies[21])
-# # print(df_e["quant"][[21,42]])
-
-# # df_e.plot.scatter(
-# #     x=df_e.index,
-# #     # x='index',
-# #     y="energies",
-# #     s="sizes"
-# # )
-
-# fig,ax = plt.subplots()
-
-# df_filtered = df_e.loc[(df_e["energies"] < 0)]
-
-# scatter = ax.scatter(
-#     x=df_filtered.index,
-#     y=(df_filtered["sizes"]-1)/df_filtered["energies"].abs(),
-#     s=8*(df_filtered["sizes"]**2),
-#     c=df_filtered["sizes"],
-#     cmap="gist_rainbow_r"
-# )
-
-# ax.set_xlabel(r"$J\subseteq I$")
-# ax.set_ylabel(r"$\frac{|J|-1}{|e_J|}$", rotation=0, labelpad=20)
-# ax.set_title(f"Quantity to minimize for each J subset of I\n(q={set_charges})")
-
-# handles, labels = scatter.legend_elements(prop="colors")
-# max_size = df_filtered["sizes"].max()
-# min_size = df_filtered["sizes"].min()
-
-# legend2 = ax.legend(handles, range(min_size, max_size+1), title="Size of J")
-
-# ax.set_xticks(range(len(energies)))``
-# ax.set_xticklabels(range(len(energies)))
-
-# plt.show()
-# enum_energies = [(bin(J).count("1"), e) for J, e in enumerate(energies) if e < 0]
-# for tup in np.array(enum_energies).tolist():
-#     print(tup)
-# # print("----")
-# sig_minus_list = [(size-1)/abs(e) for size, e in enum_energies]
-# print(sig_minus_list)
-# print([round(num, 3) for num in np.array(sig_minus_list).tolist()])
-
-
-
-
-
-
 def compute(charges: List[int], primes: List[int], beta_vals, trees: pd.DataFrame):
     energies = interaction_energy(charges)
     df_arr = []
@@ -128,14 +45,11 @@ def compute(charges: List[int], primes: List[int], beta_vals, trees: pd.DataFram
     # Concatenate all per-beta DataFrames, set index as (beta, tree_id)
     return pd.concat(df_arr).set_index(['prime', 'beta', 'tree_id'])
 
-def canonical_partition_plt(df: pd.DataFrame):
-    # --- NetworkX drawing section ---
-    plt.rcParams.update({
-        "text.usetex": True,
-        "text.latex.preamble": r"""\usepackage{lmodern}\renewcommand{\familydefault}{\sfdefault}"""
-    })
+def canonical_partition_plt(df: pd.DataFrame, fig = None, ax = None):
+    if (fig and not ax) or (ax and not fig):
+        raise ValueError("Must have both figure and axes or neither.")
     
-    Zfig, Zax = plt.subplots(figsize=(8, 3))
+    Zfig, Zax = plt.subplots(figsize=(8, 3)) if not fig and not ax else (fig, ax)
 
     for p in df.index.get_level_values("prime").unique():
         Z_i = []
@@ -148,20 +62,16 @@ def canonical_partition_plt(df: pd.DataFrame):
 
         Zax.plot(beta_vals, Z_i, label=p)
 
-    Zax.set_xlabel(r'\boldmath$\beta$', fontsize=14)
-    Zax.set_ylabel(r'\boldmath$Z_I(\beta)$', fontsize=14,
-                   rotation=0, horizontalalignment="right")
-    Zax.set_title(
-        f'Canonical Partition for $q_I=({','.join(map(str, set_charges))})$', fontsize=18)
-    Zfig.canvas.manager.set_window_title(f"Z_I_beta_q{set_charges}")
-    Zax.set_yscale("log")
-    Zax.legend(title="Prime p")
-
-    Zfig.subplots_adjust(left=0.14, bottom=0.2, right=0.86)
+    # Zax.set_xlabel(r'\boldmath$\beta$', fontsize=10)
+    # Zax.set_ylabel(r'\boldmath$Z_I(\beta)$', fontsize=14,
+                #    rotation=0, horizontalalignment="right")
+    # Zax.set_title(f'$\\mathcal{{Z}}_I(\\beta)$ for $q_I=({','.join(map(str, set_charges))})$', fontsize=14)
+    # Zax.set_yscale("log")
+    # Zax.legend(title="Prime p")
 
     return Zfig
 
-def expected_val_plt(df: pd.DataFrame):
+def expected_val_plt(df: pd.DataFrame, set_charges, beta_step):
     Efig, Eax = plt.subplots()
 
     for p in df.index.get_level_values("prime").unique():
@@ -186,7 +96,7 @@ def expected_val_plt(df: pd.DataFrame):
 
     return Efig
 
-def variance_plt(df: pd.DataFrame):
+def variance_plt(df: pd.DataFrame, set_charges, beta_step):
     Vfig, Vax = plt.subplots()
 
     for p in df.index.get_level_values("prime").unique():
@@ -214,36 +124,127 @@ def variance_plt(df: pd.DataFrame):
 
     return Vfig
 
+###############################################################
 
-trees = query(n, primes, "..")
-trees["branches"] = trees["branches"].apply(ast.literal_eval)
-trees["degrees"] = trees["degrees"].apply(ast.literal_eval)
+plt.rcParams.update({
+    "text.usetex": True,
+    "text.latex.preamble": r"""\usepackage{lmodern}\usepackage{amsfonts}\renewcommand{\familydefault}{\sfdefault}"""
+})
 
-df = compute(set_charges, primes, beta_vals, trees)
-
-tree_ids = df.index.get_level_values('tree_id').unique()
-df.index = df.index.set_levels([range(1,len(tree_ids)+1) if name == 'tree_id' else df.index.levels[i]
-                          for i, name in enumerate(df.index.names)])
-
-print(len(df))
-print(df.head())
-Zfig = canonical_partition_plt(df)
-# Efig = expected_val_plt(df)
-# Vfig = variance_plt(df)
+# primes to compute for
+primes = [2, 3, 5, 7, 11]
+# charges_arr = [[1, 1, -1, -1], [5, 2, 1, -3], [-1, -2, -2, -3]]
+# beta_step_arr = [0.02, 0.0003, 0.05]
+charges_arr = [[5, 2, 1, -3]]
+beta_step_arr = [0.0003]
+num_plots = len(charges_arr)
+# num_plots = 1
 
 prob_figs: List[TreePlt] = []
-prob_plt = TreePlt(df, primes, set_charges, beta_step, subplots=True)
-prob_figs.append(prob_plt)
-prob_plt.plot()
+# Zfig, Zaxs = plt.subplots(figsize=(5,8), nrows=num_plots)
+Zfig, Zaxs = plt.subplots(figsize=(6, 2.5), nrows=num_plots)
+# Zfig = canonical_partition_plt(df)
+# Efig = expected_val_plt(df)
+# Vfig = variance_plt(df)
+if num_plots == 1:
+    Zaxs = [Zaxs]
 
-# for p in primes:
-#     print(f"------------{p}------------")
+print(enumerate(zip(beta_step_arr, charges_arr)))
+for i, (step, charges) in enumerate(zip(beta_step_arr, charges_arr)):
+    n = len(charges)
+    q_max = max(charges)
+    q_min = min(charges)
 
-#     prob_plt.plot(p)
+    # calculates interaction energies and sigmas
+    energies = interaction_energy(charges)
+    sig_minus = 1/abs(q_max*q_min)
+    if q_max*q_min >= 0:
+        sig_minus = 2
+    sig_plus = 0 + step
+    # caluclates array of values with given beta_step between (-\sigma^+, \sigma^-)
+    beta_vals = np.arange(-sig_plus, sig_minus, step)
+    # excludes endpoints
+    beta_vals = beta_vals[1:]
 
-path = f"../../plots/{Zfig.canvas.manager.get_window_title()}.png"
+    trees = query(n, primes, "..")
+    trees["branches"] = trees["branches"].apply(ast.literal_eval)
+    trees["degrees"] = trees["degrees"].apply(ast.literal_eval)
+
+    df = compute(charges, primes, beta_vals, trees)
+
+    tree_ids = df.index.get_level_values('tree_id').unique()
+    df.index = df.index.set_levels([range(1,len(tree_ids)+1) if name == 'tree_id' else df.index.levels[i]
+                            for i, name in enumerate(df.index.names)])
+
+    print(len(df))
+    print(df.head(3))
+
+    prob_plt = TreePlt(df, primes, charges, step, subplots=True)
+    prob_figs.append(prob_plt)
+    prob_plt.plot()
+
+    print(f"charges {charges} have sig_minus {sig_minus}")
+
+    # ------------ Plotting ------------
+    ax = Zaxs[i]
+    canonical_partition_plt(df, Zfig, ax)
+
+    ax.set_title(
+        r"$\mathcal{Z}_4(\beta)$ for $(\mathfrak{q}_1, \mathfrak{q}_2, \mathfrak{q}_3, \mathfrak{q}_4)=(" +
+        ', '.join(map(str, charges)) +
+        r")$",
+        fontsize=14,
+        pad=10
+    )
+    # if i == 0: 
+    #     ax.legend(title="Prime p")
+    #     patches, labels = ax.get_legend_handles_labels()
+    #     # Get rid of the legend on the first plot, so it is only drawn on the separate figure
+    #     ax.get_legend().remove()
+    #     figlegend.legend(patches, labels, title="Prime p")
+    #     figlegend.savefig('legend.png', dpi=300)
+
+    if q_min < 0 and q_max > 0:
+        ax.set_yscale("log")
+
+        ax.axvline(
+            x=sig_minus,
+            linestyle="--",
+            color="black",
+            label=r"$\beta_c$"
+        )
+
+        # ax.set_xticklabels(current_labels)
+        ax.annotate(
+            r"\boldmath$\beta_c$",
+            xy=(sig_minus, 0.3),
+            xycoords=('data', 'axes fraction'),
+            # xytext=(0),
+            # textcoords='offset points',
+            ha='center',
+            va='top',
+            fontsize=12,
+            bbox=dict(
+                # boxstyle="pad=0.3",
+                facecolor="white",
+                edgecolor="white"
+            )
+            # arrowprops=dict(arrowstyle='-', color='black')  # optional arrow
+        )
+    else:
+        pass
+
+    Zfig.canvas.manager.set_window_title(f"Z_I_beta_q{charges}")
+    Zfig.supxlabel(r'\boldmath$\beta$', fontsize=10)
+    width, height = Zfig.get_size_inches()
+    print(0.96, height)
+    Zfig.subplots_adjust(left=0.08, bottom=0.15, right=0.97, top=0.87, hspace=0.4)
+
+
+
+path = f"../../poster/{Zfig.canvas.manager.get_window_title()}.png"
 Zfig.savefig(path, dpi=300)
-prob_plt.fig.savefig("prob1.png", bbox_inches='tight', dpi=300)
+# prob_plt.fig.savefig("prob1.png", bbox_inches='tight', dpi=300)
 
 plt.show()
 
