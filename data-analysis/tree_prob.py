@@ -41,14 +41,19 @@ class TreePlt:
         # Set up probability plot with slider
         if self.subplots:
             self.fig, axs = plt.subplots(
-                1, len(self.primes), figsize=self.fig_size, sharey=True, sharex=sort_by != "all")
-            self.ax = np.atleast_1d(axs)  # ensure it's always an array of axes
+                1,
+                len(self.primes),
+                figsize=self.fig_size,
+                sharey=True,
+                sharex=sort_by != "all"
+            )
+            self.ax = np.atleast_1d(axs)
             # for ax in self.ax[1:]:
             #     ax.set_yticks([])  # Remove y-ticks
             #     # ax.set_ylabel("")
         else:
             self.fig, ax = plt.subplots(figsize=self.fig_size)
-            self.ax = np.array([ax])  # keep ax handling consistent
+            self.ax = np.array([ax])
                 
         self.fig.supylabel("Probability", x=0.01)
         self.fig.supxlabel("Tree ID", y=0.01)
@@ -66,7 +71,7 @@ class TreePlt:
         self.fig._slider.on_changed(self.update)
 
         # self.ax_slider.set_axis_off()
-        self.fig._slider.ax.set_visible(False)
+        # self.fig._slider.ax.set_visible(False)
 
     def __str__(self):
         return f"Tree Plot (q={self.set_charges}, p={self.primes}, step={self.beta_step})"
@@ -122,7 +127,7 @@ class TreePlt:
         # Update Titles
         self.filename = f"prob_n{self.N}_q{self.set_charges}_p{self.primes}_b{self.beta_step:.3f}.mp4"
         self.title = f'Physical Probability of Trees\n(N={self.N}, q={self.set_charges}, p={self.primes}, step={self.beta_step:.3f})'
-        # self.fig.suptitle(self.title)
+        self.fig.suptitle(self.title)
         self.fig.canvas.manager.set_window_title(f"Prob for {self.primes}")
 
         if self.subplots and self.sort == "all":
