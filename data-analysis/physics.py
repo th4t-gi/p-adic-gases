@@ -16,24 +16,23 @@ def compute(charges: List[int], primes: List[int], beta_vals, trees: pd.DataFram
 
     # Computes Z_I(\beta), Expected value, Variance, and P_tree(p, \beta) for all betas
     for p in primes:
-        trees_p = trees.loc[p]
         for beta in beta_vals:
             # computes probability for all trees
-            terms = trees_p.apply(lambda row: term(
+            terms = trees.apply(lambda row: term(
                 row["branches"], row["degrees"], p, energies, beta), axis=1)
             total = terms.sum()
             probs = terms/total
 
             # computes weights and double weights for expected value and variance
-            weights = trees_p.apply(lambda row: weight(
+            weights = trees.apply(lambda row: weight(
                 row["branches"], p, energies, beta), axis=1)
-            double_weights = trees_p.apply(lambda row: double_weight(
+            double_weights = trees.apply(lambda row: double_weight(
                 row["branches"], p, energies, beta), axis=1)
 
             df_beta = pd.DataFrame({
                 'prime': p,
                 'beta': beta,
-                'tree_id': trees_p.index,
+                'tree_id': trees.index,
                 'term': terms,
                 'phys_prob': probs,
                 'weight': weights,
