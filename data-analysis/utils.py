@@ -64,17 +64,8 @@ def query(n: int, primes: List[int], path = ".") -> pd.DataFrame:
     con = sqlite3.connect(dbname)
     
     # Read query results into a pandas DataFrame
-    query = f"""
-        SELECT
-            trees.id, trees.branches, trees.degrees, probabilities.prime, probabilities.probability
-        FROM
-            probabilities
-        JOIN
-            trees ON probabilities.tree_id = trees.id
-        WHERE
-            probabilities.prime IN ({','.join(map(str, primes))})
-    """
-    df = pd.read_sql_query(query, con).set_index(["prime","id"])
+    query = "SELECT * FROM trees"
+    df = pd.read_sql_query(query, con).set_index(["id"])
     con.close()
     
     return df
