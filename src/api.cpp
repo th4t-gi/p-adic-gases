@@ -55,14 +55,17 @@ void TreesApi::init() {
 }
 
 void TreesApi::import_csv(const std::string& file, const std::string& dbname, char seperator) {
-  std::string cmd = std::format(
-    "sqlite3 {} '.mode csv' '.separator {}' '.import --skip 1 {}/{} {}'",
-    this->filename,
-    std::string{seperator},
-    outDir,
-    file,
-    dbname
-  );
+  std::string cmd = "sqlite3 " + this->filename + " '.mode csv' '.separator " + std::string{seperator} +
+                    "' '.import --skip 1 " + outDir + "/" + file + " " + dbname + "'";
+
+  // std::string cmd = fmt::format(
+  //   "sqlite3 {} '.mode csv' '.separator {}' '.import --skip 1 {}/{} {}'",
+  //   this->filename,
+  //   std::string{seperator},
+  //   outDir,
+  //   file,
+  //   dbname
+  // );
   SPDLOG_INFO("running: {}", cmd);
   system(cmd.c_str());
 
@@ -72,14 +75,15 @@ void TreesApi::import_csv(const std::string& file, const std::string& dbname, ch
 }
 
 void TreesApi::export_csv(const std::string& file, const std::string& dbname, char seperator) {
-  std::string cmd = std::format(
-    "sqlite3 -header -csv -separator '{}' {} 'select * from {};' > {}/{}",
-    std::string{seperator},
-    this->filename,
-    dbname,
-    outDir,
-    file
-  );
+  std::string cmd = "sqlite3 -header -csv -separator '" + std::string{seperator} + + "' " + this->filename + " 'select * from " + dbname + ";' > " + outDir + "/" + file;
+  // std::string cmd = fmt::format(
+  //   "sqlite3 -header -csv -separator '{}' {} 'select * from {};' > {}/{}",
+  //   std::string{seperator},
+  //   this->filename,
+  //   dbname,
+  //   outDir,
+  //   file
+  // );
   SPDLOG_INFO("running: {}", cmd);
   system(cmd.c_str());
   SPDLOG_INFO("exported to {}", file);
@@ -169,7 +173,8 @@ int TreesApi::insert_trees(const std::vector<Tree>& tr, label_size_t N) {
       db.execute("BEGIN TRANSACTION");
       db(multi_insert);
       db.execute("COMMIT");
-      std::cout << "\r[insert_trees]" << (N ? " N = " + std::to_string(N) : " ") << " batch " << i / CHUNK_SIZE + 1 << " saved" << std::flush;
+      std::cout << "\r[insert_trees]" << (N ? " N = " + std::to_string(N) : " ") << " batch " << i / CHUNK_SIZE + 1
+                << " saved" << std::flush;
     } catch (const std::exception& e) {
       std::cerr << e.what() << std::endl;
       return 1;
