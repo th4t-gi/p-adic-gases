@@ -1,9 +1,8 @@
 CXX := clang++
 CXXFLAGS := -std=c++20 -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE
-INCLUDES_FLAGS := -lsqlite3 -L/opt/homebrew/lib -lboost_program_options -lfmt
+INCLUDES_FLAGS := -lsqlite3 -L/opt/homebrew/lib  -I/opt/homebrew/include -lboost_program_options -lfmt -Ifmt/include -I/usr/local/include -L/usr/local/lib
 
-
-EXEC := phylogenees probabilities translate
+EXEC := phylogenees probabilities translate physics  #partitions blocks translate
 DEPS := utils api tree logger
 
 # Set DEBUG=1 to enable debug info, otherwise no debug info
@@ -22,7 +21,7 @@ endif
 GIT_HASH := $(shell git rev-parse --short HEAD)
 GIT_MSG  := $(shell git log -1 --pretty=%s)
 
-LOGGER_FLAGS := $(CXXFLAGS) -DGIT_HASH="\"$(GIT_HASH)\"" -DGIT_MSG="\"$(GIT_MSG)\""
+LOGGER_FLAGS := $(CXXFLAGS) -I/usr/local/include -I/opt/homebrew/include -DGIT_HASH="\"$(GIT_HASH)\"" -DGIT_MSG="\"$(GIT_MSG)\""
 
 # Directories
 SRC_DIR := src

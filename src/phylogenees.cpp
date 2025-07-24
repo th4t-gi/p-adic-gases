@@ -11,9 +11,24 @@
 #include "logger.h"
 #include "tree.h"
 
+#include <algorithm>
+
 namespace po = boost::program_options;
 
-void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local) {
+bool check_tree(const Tree fork, code_t I_max, code_t I_min){
+  int m = std::min(bit_length(I_max),bit_length(I_min));
+  for (auto J : fork.branches){
+    if (bit_length(J) == 2){
+      if((J & I_max) && (J & I_min)){
+        m--;
+      }
+    }
+  }
+  return (m == 0);
+}
+
+
+void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local, code_t IMAX, code_t IMIN) {
   double sum_of_prob = 0;
   int p = 2;
   // base cases for 1, 2
@@ -76,6 +91,11 @@ void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local) {
         } else {
           curr_fork.degrees.insert(curr_fork.degrees.begin(), 2);
         }
+        //Check if fork is a prevailing fork
+        if(check_tree(curr_fork, IMAX, IMIN)){
+          //PUSH TREE TO R*_I Vector
+        }
+
         local[N - 1].push_back(curr_fork);
         // Probabilities
         printf("The fork: %s\n", curr_fork.to_string().c_str());
@@ -87,6 +107,12 @@ void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local) {
           dup_fork.append(left_translated_fork, false);
           dup_fork.degrees.insert(dup_fork.degrees.begin(), 2);
           // trees::insert_tree(db, dup_fork);
+
+          //Check if fork is a prevailing fork
+          if(check_tree(curr_fork, IMAX, IMIN)){
+          //PUSH TREE TO R*_I Vector
+          }
+
           local[N - 1].push_back(dup_fork);
 
           // Probabilities
@@ -111,13 +137,17 @@ int main(int argc, char** argv) {
   std::string export_file = "";
   std::string db_file = "trees.db";
   int reset_to;
-
+  code_t IMAX = 0;
+  code_t IMIN = 0;
   // Declaring arguments
   po::options_description desc("Allowed options");
   desc.add_options()
         ("help", "produce help message")
         ("n-value,n", po::value<code_t>(&N)->required(), "Number of particles")
         ("reset,r", po::value<int>(&reset_to),"Reset database to kth size")
+        ("create_ri", "Create the full database")
+        ("i_max", po::value<code_t>(&IMAX), "Indices with maximum charge")
+        ("i_min", po::value<code_t>(&IMIN), "Indices with minimum charge")
         ("print-trees,p", "Do you want to print trees?")
         ("import", po::value<std::string>(&import_file), "Imported database")
         ("export", po::value<std::string>(&export_file), "Exported database")
@@ -224,7 +254,7 @@ int main(int argc, char** argv) {
     // compute chains for size max + 1 to N and store in tree_arr
     for (int i = max + 1; i <= N; i++) {
       SPDLOG_INFO("calculating N = {}", i);
-      make_chains(i, tree_arr);
+      make_chains(i, tree_arr, IMAX, IMIN);
 
       SPDLOG_DEBUG("computed {} trees", tree_arr[i - 1].size());
       if (print) {

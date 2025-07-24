@@ -68,10 +68,9 @@ void TreesApi::import_csv(const std::string& file, const std::string& dbname, ch
   // );
   SPDLOG_INFO("running: {}", cmd);
   system(cmd.c_str());
-
+  
   int count = db(select(sqlpp::count(1)).from(trees).unconditionally()).front().count;
 
-  SPDLOG_INFO("Imported {} rows", count);
 }
 
 void TreesApi::export_csv(const std::string& file, const std::string& dbname, char seperator) {
@@ -86,13 +85,11 @@ void TreesApi::export_csv(const std::string& file, const std::string& dbname, ch
   // );
   SPDLOG_INFO("running: {}", cmd);
   system(cmd.c_str());
-  SPDLOG_INFO("exported to {}", file);
 }
 
 void TreesApi::reset_trees(label_size_t labelSize) {
   std::string name = trees::Trees::_alias_t::_literal;
 
-  SPDLOG_DEBUG("resetting trees to N={}", labelSize);
   db(remove_from(trees).where(trees.labelSize > labelSize));
 
   int count = db(select(sqlpp::count(1)).from(trees).unconditionally()).front().count;
@@ -112,7 +109,6 @@ label_size_t TreesApi::get_max_label_size() {
 }
 
 std::vector<Tree> TreesApi::get_trees(label_size_t labelSize) {
-  spdlog::stopwatch sw;
   std::vector<Tree> out;
 
   auto select_stmt = db.prepare(select(all_of(trees)).from(trees).where(trees.labelSize == labelSize));
@@ -125,12 +121,10 @@ std::vector<Tree> TreesApi::get_trees(label_size_t labelSize) {
     out.push_back(new_tree);
   }
 
-  SPDLOG_DEBUG("loaded {} trees of label size {} ({})", out.size(), labelSize, sw.elapsed_ms());
   return out;
 }
 
 int TreesApi::insert_tree(const Tree& t) {
-  spdlog::stopwatch sw;
   json branchesArr = t.branches;
   json degreesArr = t.degrees;
 
@@ -145,13 +139,11 @@ int TreesApi::insert_tree(const Tree& t) {
     return 1;
   }
 
-  SPDLOG_INFO("b={} ({})", t.to_string(), sw);
 
   return 0;
 }
 
 int TreesApi::insert_trees(const std::vector<Tree>& tr, label_size_t N) {
-  spdlog::stopwatch sw;
 
   static constexpr size_t CHUNK_SIZE = 100000;
 
@@ -182,7 +174,6 @@ int TreesApi::insert_trees(const std::vector<Tree>& tr, label_size_t N) {
   }
   std::cout << std::endl;
 
-  SPDLOG_DEBUG("({})", sw);
 
   return 0;
 }

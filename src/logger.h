@@ -15,7 +15,7 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
-
+#include <sstream>
 namespace logger {
 
 extern std::shared_ptr<spdlog::logger> logger;

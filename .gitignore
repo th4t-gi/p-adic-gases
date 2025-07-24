@@ -14,6 +14,7 @@
 !ddl.txt
 !*.py
 !*.ipynb
+!physics.ipynb
 
 # exclude all these:
 **/.DS_Store
