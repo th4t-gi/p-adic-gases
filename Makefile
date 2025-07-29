@@ -2,7 +2,7 @@ CXX := clang++
 CXXFLAGS := -std=c++20 -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE
 INCLUDES_FLAGS := -lsqlite3 -lSQLiteCpp -L/opt/homebrew/lib -I/opt/homebrew/include -I/usr/local/include -L/usr/local/lib -lboost_program_options -lfmt
 
-EXEC := phylogenees probabilities translate physics  #partitions blocks translate
+EXEC := phylogenees #probabilities translate physics partitions blocks
 DEPS := utils api tree logger
 
 # Set DEBUG=1 to enable debug info, otherwise no debug info

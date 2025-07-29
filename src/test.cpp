@@ -15,6 +15,8 @@
 
 // #include "logger.h"
 #include "utils.h"
+#include "api.h"
+#include "tree.h"
 
 #define COLS 3
 
@@ -127,26 +129,32 @@ int main(void) {
   // unsigned long max = std::numeric_limits<int>::max() >> 8;
   // std::cout << max << std::endl;
 
-  std::vector<TestObj> objs;
+  APIWrapper api("./test.db", false);
 
-  SQLite::Database db("./dummy2.db", SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE);
+  SQLite::Statement query(api.db, "SELECT * FROM trees WHERE label_size == 6");
 
-  std::string q = "SELECT * FROM core";
-  SQLite::Statement query(db, q);
-
+  std::vector<Tree> objs;
   while (query.executeStep()) {
-    int cols = query.getColumnCount();
-    TestObj obj = query.getColumns<TestObj, COLS + TestObj::primes.size()>();
+    Tree obj = Tree::fromColumns(
+      query.getColumn(0),
+      query.getColumn(1),
+      query.getColumn(2),
+      query.getColumn(3)
+    );
+    std::cout << obj.to_string() << "\n";
     objs.push_back(obj);
   }
+  std::cout << std::endl;
 
-  for (TestObj o : objs) {
-    o.print();
-  }
+  // std::cout << std::endl;
 
-  TestObj obj2{6, "nop", "opq"};
+  // for (TestObj o : objs) {
+  //   o.print();
+  // }
 
-  obj2.insert_testobj(db, "core2");
+  // TestObj obj2{6, "nop", "opq"};
+
+  // obj2.insert_testobj(db, "core2");
 
   return 0;
 }
