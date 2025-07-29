@@ -2,35 +2,48 @@
 
 #include "utils.h"
 
-Tree::Tree() : branches{}, setSize{0}, degrees{}, id{-1} {}
-Tree::Tree(std::vector<code_t> b, label_size_t size) : branches{b}, setSize{size}, degrees{}, id{-1} {}
-Tree::Tree(std::vector<code_t> b, label_size_t size, std::vector<degree_t> d) : branches{b}, setSize{size}, degrees{d}, id{-1} {}
+Tree::Tree() : branches{}, labelSize{0}, degrees{}, id{-1} {}
+Tree::Tree(std::vector<code_t> b, label_size_t labelSize) : branches{b}, labelSize{labelSize}, degrees{}, id{-1} {}
+Tree::Tree(std::vector<code_t> b, label_size_t labelSize, std::vector<degree_t> d)
+    : branches{b}, labelSize{labelSize}, degrees{d}, id{-1} {}
 
-Tree::Tree(long id, std::vector<code_t> b, label_size_t size) : branches{b}, setSize{size}, degrees{}, id{id} {}
-Tree::Tree(long id, std::vector<code_t> b, label_size_t size, std::vector<degree_t> d) : branches{b}, setSize{size}, degrees{d}, id{id} {}
+Tree::Tree(long id, std::vector<code_t> b, label_size_t labelSize)
+    : branches{b}, labelSize{labelSize}, degrees{}, id{id} {}
+Tree::Tree(long id, std::vector<code_t> b, std::vector<degree_t> d, label_size_t labelSize)
+    : branches{b}, labelSize{labelSize}, degrees{d}, id{id} {}
 
-double Tree::probability(int p) { 
-  double prod = 1.0;
-  for (int i = 0; i < branches.size(); i++){
-    double x = falling_factorial(p, degrees[i]);
-    prod *= x /(pow(p, bit_length(branches[i])) - p);
-  }
-  return prod; 
+Tree Tree::fromColumns(
+  const SQLite::Column& idCol, const SQLite::Column& bCol, const SQLite::Column& dCol, label_size_t labelSize
+) {
+  long id = idCol.getInt64();
+  std::vector<code_t> b_vec = nlohmann::json::parse(bCol.getText()).get<std::vector<code_t>>();
+  std::vector<degree_t> d_vec = nlohmann::json::parse(dCol.getText()).get<std::vector<degree_t>>();
+
+  return Tree(id, b_vec, d_vec, labelSize);
 }
 
-//Calculates the trem of the summand for the partition equation
-double Tree::term(double beta, int p, std::vector<double> interaction_arr){
+double Tree::probability(int p) {
   double prod = 1.0;
-  for (int i = 0; i< branches.size(); i++){
-    prod *= (falling_factorial(p, degrees[i]))/(pow(p, bit_length(branches[i]) + (interaction_arr[branches[i]] * beta)) - p);
+  for (int i = 0; i < branches.size(); i++) {
+    double x = falling_factorial(p, degrees[i]);
+    prod *= x / (pow(p, bit_length(branches[i])) - p);
   }
   return prod;
 }
 
+// Calculates the trem of the summand for the partition equation
+double Tree::term(double beta, int p, std::vector<double> interaction_arr) {
+  double prod = 1.0;
+  for (int i = 0; i < branches.size(); i++) {
+    prod *= (falling_factorial(p, degrees[i])) /
+            (pow(p, bit_length(branches[i]) + (interaction_arr[branches[i]] * beta)) - p);
+  }
+  return prod;
+}
 
 Tree Tree::translate(code_t target) {
   Tree translated_fork;
-  translated_fork.setSize = setSize;
+  translated_fork.labelSize = labelSize;
   translated_fork.degrees = degrees;
   // shifts branches for the first of the nested calls.
   for (auto block : branches) {
@@ -75,7 +88,7 @@ std::string Tree::to_set_string() const {
   for (auto branch : branches) {
     if (comma) result += ",";
     comma = true;
-    result += binarySet(branch, setSize);
+    result += binarySet(branch, labelSize);
   }
   result += "]";
   return result;

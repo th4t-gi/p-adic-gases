@@ -35,14 +35,14 @@ void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local, code_t I
   if (N <= 2) {
     switch (N) {
       case 1: {
-        Tree one{std::vector<code_t>{}, 1, std::vector<degree_t>{}};
+        Tree one{1, std::vector<code_t>{}, std::vector<degree_t>{}, 1};
         local[N - 1].push_back(one);
         // trees::insert_tree(db, one);
         break;
       }
 
       case 2: {
-        Tree two{std::vector<code_t>{3}, 2, std::vector<degree_t>{2}};
+        Tree two{1, std::vector<code_t>{3}, std::vector<degree_t>{2}, 2};
         local[N - 1].push_back(two);
         // trees::insert_tree(db, two);
         break;
@@ -59,7 +59,7 @@ void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local, code_t I
 
   Tree base_fork;
   base_fork.branches.push_back(set_1toN);
-  base_fork.setSize = N;
+  base_fork.labelSize = N;
 
   // iterate over all subsets of {1,2,..., N-1} that have N-2 or fewer elements
   for (code_t J = 0; J < elt_N - 1; J++) {
@@ -97,10 +97,6 @@ void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local, code_t I
         }
 
         local[N - 1].push_back(curr_fork);
-        // Probabilities
-        printf("The fork: %s\n", curr_fork.to_string().c_str());
-        printf("has probability %lf, with prime %d\n", curr_fork.probability(p), p);
-        sum_of_prob += curr_fork.probability(p);
         // trees::insert_tree(db, curr_fork);
 
         if (left_chain_size > 1) {
@@ -114,11 +110,6 @@ void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local, code_t I
           }
 
           local[N - 1].push_back(dup_fork);
-
-          // Probabilities
-          printf("The fork: %s\n", dup_fork.to_string().c_str());
-          printf("has probability %lf, with prime %d\n", dup_fork.probability(p), p);
-          sum_of_prob += dup_fork.probability(p);
         }
 
         // Reset the current fork inside the for loop
@@ -127,7 +118,6 @@ void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local, code_t I
     }
   }
 
-  printf("The sume of the probabilities is %lf\n", sum_of_prob);
   return;
 }
 
@@ -187,7 +177,7 @@ int main(int argc, char** argv) {
   logger::preamble(concat_argv(argc, argv), change);
 
   // intialize database connection
-  TreesApi db(db_file, true);
+  APIWrapper db(db_file, true);
 
   bool print = vm.count("print-trees");
   // Start the clock
@@ -195,8 +185,9 @@ int main(int argc, char** argv) {
 
   // import from csv
   if (!import_file.empty()) {
-    db.import_csv(import_file, "trees");
-    SPDLOG_INFO("{}s", sw);
+    // db.import_csv(import_file, "trees");
+    SPDLOG_INFO("IMPORT IS CURRENTLY DISABLED {}s", sw);
+    return 0;
   }
 
   sw.reset();
@@ -216,8 +207,8 @@ int main(int argc, char** argv) {
     SPDLOG_WARN("already generated trees up to N = " + std::to_string(N) + " (max = " + std::to_string(max) + ")");
 
     if (!export_file.empty()) {
-      db.export_csv(export_file);
-      SPDLOG_INFO("[export] ({:.4f}s)", sw);
+      // db.export_csv(export_file);
+      SPDLOG_INFO("EXPORT IS CURRENTLY DISABLED [export] ({:.4f}s)", sw);
     }
 
     return 0;
@@ -229,7 +220,7 @@ int main(int argc, char** argv) {
   std::vector<std::vector<Tree>> tree_arr;
   tree_arr.reserve(N);
   for (int k = 1; k <= N; k++) {
-    std::vector<Tree> v = db.get_trees(k);
+    std::vector<Tree> v = db.get_trees(k, false);
     if (v.size()) {
       tree_arr.push_back(v);
     } else {
@@ -268,18 +259,18 @@ int main(int argc, char** argv) {
     sw.reset();
 
     // Writing to filesystem
-    SPDLOG_INFO("saving to {}", db.filename);
+    SPDLOG_INFO("saving to {}", db.getDBpath());
     for (int i = max + 1; i <= N; i++) {
       SPDLOG_DEBUG("starting N = {}", i);
-      db.insert_trees(tree_arr[i - 1], i);
+      db.insert_trees(tree_arr[i - 1], i, false);
     }
 
     SPDLOG_INFO("finished write ({:.4f}s)", sw);
     sw.reset();
 
     if (!export_file.empty()) {
-      SPDLOG_INFO("exporting to {}", export_file);
-      db.export_csv(export_file);
+      SPDLOG_INFO("EXPORT IS CURRENTLY DISABLED exporting to {}", export_file);
+      // db.export_csv(export_file);
       SPDLOG_INFO("finished export ({:.4f}s)", sw);
     }
 

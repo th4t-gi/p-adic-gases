@@ -1,44 +1,55 @@
 #pragma once
 
-#include <sqlpp11/sqlite3/connection.h>
+#include <SQLiteCpp/SQLiteCpp.h>
+#include <spdlog/spdlog.h>
+#include <spdlog/stopwatch.h>
 
-
-// #include <format>
-#include <fstream>
+#include <format>
 #include <iostream>
 #include <json.hpp>
 #include <string>
+#include <vector>
 
-#include "db.h"
 #include "tree.h"
 #include "utils.h"
 
 using json = nlohmann::json;
-using connection = sqlpp::sqlite3::connection;
 
-class TreesApi {
+class APIWrapper {
  public:
-  trees::Trees trees;
-  std::string filename;
-  std::string outDir;
-  connection db;
-  std::fstream filestream;
   bool verbose;
+  SQLite::Database db;
 
-  TreesApi(std::string filename, bool verbose = false, std::string outDir = "./out");
+  APIWrapper(std::string dbpath, bool verbose = false);
+  std::string getDBpath();
 
-  void init();
-  void import_csv(const std::string& file, const std::string& dbname = "trees", char seperator = ',');
-  void export_csv(const std::string& file, const std::string& dbname = "trees", char seperator = ',');
-  void reset_trees(label_size_t size = 0);
-  std::vector<Tree> get_trees(label_size_t setSize);
-  label_size_t get_max_label_size();
+  int get_max_label_size();
+  Tree get_tree(uint64_t treeId, label_size_t labelSize, bool is_filtered);
+  std::vector<Tree> get_trees(label_size_t labelSize, bool is_filtered);
+  std::string get_tree_table(label_size_t labelSize, bool is_filtered);
 
-  int insert_tree(const Tree& t);
-  int insert_trees(const std::vector<Tree>& tr, label_size_t N = 0);
+  int insert_tree(const Tree& t, bool is_filtered);
+  int insert_trees(const std::vector<Tree>& trees, label_size_t labelSize, bool is_filtered);
+  void reset_trees(label_size_t labelSize = 0);
+  void create_tree_table(label_size_t labelSize, bool is_filtered);
+
+  void import_csv(const std::string& file, const std::string& tablename, char seperator);
+  void export_csv(const std::string& file, const std::string& tablename, char seperator);
+
+ private:
+  inline static constexpr const char* treesSchema =
+    "CREATE TABLE IF NOT EXISTS {} ("
+    "branches JSON NOT NULL,"
+    "degrees JSON NOT NULL"
+    ");";
+  // "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+  inline static constexpr const char* metaSchema =
+    "CREATE TABLE IF NOT EXISTS trees_sequence ("
+    "name TEXT PRIMARY KEY,"
+    "label_size INTEGER NOT NULL,"
+    "is_filtered BOOLEAN DEFAULT 0"
+    ");";
+
+  std::string outDir = "./out/";
+  std::string dbpath;
 };
-
-namespace trees {
-auto get_block(connection& db, int id);
-int insert_block(connection& db, int id, std::string setStr, int size);
-}  // namespace trees
