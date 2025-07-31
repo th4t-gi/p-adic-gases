@@ -11,15 +11,13 @@
 #include "logger.h"
 #include "tree.h"
 
-#include <algorithm>
-
 namespace po = boost::program_options;
 
-bool check_tree(const Tree fork, code_t I_max, code_t I_min){
-  int m = std::min(bit_length(I_max),bit_length(I_min));
-  for (auto J : fork.branches){
-    if (bit_length(J) == 2){
-      if((J & I_max) && (J & I_min)){
+bool check_tree(const Tree fork, code_t I_max, code_t I_min) {
+  int m = std::min(bit_length(I_max), bit_length(I_min));
+  for (auto J : fork.branches) {
+    if (bit_length(J) == 2) {
+      if ((J & I_max) && (J & I_min)) {
         m--;
       }
     }
@@ -27,42 +25,30 @@ bool check_tree(const Tree fork, code_t I_max, code_t I_min){
   return (m == 0);
 }
 
+int make_chains(label_size_t N, APIWrapper& db, code_t IMAX, code_t IMIN) {
 
-void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local, code_t IMAX, code_t IMIN) {
-  double sum_of_prob = 0;
-  int p = 2;
-  // base cases for 1, 2
-  if (N <= 2) {
-    switch (N) {
-      case 1: {
-        Tree one{1, std::vector<code_t>{}, std::vector<degree_t>{}, 1};
-        local[N - 1].push_back(one);
-        // trees::insert_tree(db, one);
-        break;
-      }
+  std::vector<Tree> local;
+  int total = 0;
+  local.reserve(2 * db.BATCH_WRITE_SIZE);
 
-      case 2: {
-        Tree two{1, std::vector<code_t>{3}, std::vector<degree_t>{2}, 2};
-        local[N - 1].push_back(two);
-        // trees::insert_tree(db, two);
-        break;
-      }
-
-      default:
-        break;
-    }
-    return;
+  // base cases for N=1 or N=2
+  if (N == 1) {
+    Tree one{{}, 1, {}};
+    db.insert_tree(one);
+    return 1;
+  } else if (N == 2) {
+    Tree two{{3}, 2, {2}};
+    db.insert_tree(two);
+    return 1;
   }
 
   code_t set_1toN = (1 << N) - 1;
   code_t elt_N = (1 << (N - 1));
 
-  Tree base_fork;
-  base_fork.branches.push_back(set_1toN);
-  base_fork.labelSize = N;
+  const Tree base_fork({set_1toN}, N);
 
   // iterate over all subsets of {1,2,..., N-1} that have N-2 or fewer elements
-  for (code_t J = 0; J < elt_N - 1; J++) {
+  for (code_t J = 0; J < elt_N - 1; ++J) {
     Tree curr_fork = base_fork;
     // Grab number of bits in J and add it to the number of bits in N_max
     label_size_t right_chain_size = bit_length(J) + 1;
@@ -72,13 +58,15 @@ void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local, code_t I
     label_size_t left_chain_size = N - right_chain_size;
     code_t left_target = set_1toN - right_target;
 
-    // Move through all trees with J (buddies) unioned with {N}
-    for (Tree right_fork : local[right_chain_size - 1]) {
+    std::vector<Tree> right_trees = db.get_trees(right_chain_size);
+    std::vector<Tree> left_trees = db.get_trees(left_chain_size);
+
+    for (Tree right_fork : right_trees) {
       // shifts branches for the first of the nested calls.
       Tree right_translated_fork = right_fork.translate(right_target);
 
       // Look at other side of the partition
-      for (Tree left_fork : local[left_chain_size - 1]) {
+      for (Tree left_fork : left_trees) {
         curr_fork.append(right_translated_fork);
         // shifts branches for the second of the nested calls.
         Tree left_translated_fork = left_fork.translate(left_target);
@@ -91,35 +79,45 @@ void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local, code_t I
         } else {
           curr_fork.degrees.insert(curr_fork.degrees.begin(), 2);
         }
-        //Check if fork is a prevailing fork
-        if(check_tree(curr_fork, IMAX, IMIN)){
-          //PUSH TREE TO R*_I Vector
+        // Check if fork is a prevailing fork
+        if (check_tree(curr_fork, IMAX, IMIN)) {
+          // PUSH TREE TO R*_I Vector
         }
 
-        local[N - 1].push_back(curr_fork);
-        // trees::insert_tree(db, curr_fork);
+        local.push_back(curr_fork);
 
         if (left_chain_size > 1) {
           dup_fork.append(left_translated_fork, false);
           dup_fork.degrees.insert(dup_fork.degrees.begin(), 2);
-          // trees::insert_tree(db, dup_fork);
 
-          //Check if fork is a prevailing fork
-          if(check_tree(curr_fork, IMAX, IMIN)){
-          //PUSH TREE TO R*_I Vector
+          // Check if fork is a prevailing fork
+          if (check_tree(curr_fork, IMAX, IMIN)) {
+            // PUSH TREE TO R*_I Vector
           }
 
-          local[N - 1].push_back(dup_fork);
+          local.push_back(dup_fork);
         }
 
         // Reset the current fork inside the for loop
         curr_fork = base_fork;
       }
+
+      // SPDLOG_WARN("local has {} trees", local.size());
+
+      if (local.size() >= db.BATCH_COMPUTE_SIZE) {
+        // SPDLOG_INFO("local has {} trees", local.size());
+        total += db.insert_trees(local, N);
+        local.clear();
+      }
     }
   }
 
-  return;
+  total += db.insert_trees(local, N);
+
+  SPDLOG_INFO("computed {} trees in total", total);
+  return total;
 }
+
 
 int main(int argc, char** argv) {
   code_t N;
@@ -142,7 +140,7 @@ int main(int argc, char** argv) {
         ("import", po::value<std::string>(&import_file), "Imported database")
         ("export", po::value<std::string>(&export_file), "Exported database")
         ("database,d", po::value<std::string>(&db_file), "database file")
-        ("ignore_change", "Do not ask what the changes/goal of this run is")
+        ("ignore-changes", "Do not ask what the changes/goal of this run is")
         ("verbose,v", "Do verbose or not");
 
   po::positional_options_description p;
@@ -169,7 +167,7 @@ int main(int argc, char** argv) {
   logger::init("log", vm.count("verbose") ? spdlog::level::debug : spdlog::level::info);
 
   std::string change = "";
-  if (!vm.count("ignore_change")) {
+  if (!vm.count("ignore-changes")) {
     std::cout << "What changes would you like to record? ";
     std::getline(std::cin, change);
   }
@@ -217,18 +215,19 @@ int main(int argc, char** argv) {
   sw.reset();
 
   // caching trees
-  std::vector<std::vector<Tree>> tree_arr;
-  tree_arr.reserve(N);
-  for (int k = 1; k <= N; k++) {
-    std::vector<Tree> v = db.get_trees(k, false);
-    if (v.size()) {
-      tree_arr.push_back(v);
-    } else {
-      tree_arr.push_back(std::vector<Tree>{});
-    }
-  }
+  // std::vector<std::vector<Tree>> tree_arr;
+  // tree_arr.reserve(N);
+  // for (int k = 1; k <= N; k++) {
+  //   std::vector<Tree> v = db.get_trees(k, false);
 
-  SPDLOG_INFO("cached trees successfully ({:.4f}s)", sw);
+  //   if (v.size()) {
+  //     tree_arr.push_back(v);
+  //   } else {
+  //     tree_arr.push_back(std::vector<Tree>{});
+  //   }
+  // }
+
+  // SPDLOG_INFO("cached trees successfully ({:.4f}s)", sw);
 
   char ready = question("ready to run calculation? (y/n) ", 'y');
 
@@ -237,7 +236,7 @@ int main(int argc, char** argv) {
     return 0;
   } else if (ready == 'y') {
     // MAIN LOGIC
-    SPDLOG_INFO("Generating trees for all label sizes " + std::to_string(max) + " to " + std::to_string(N) + "...");
+    SPDLOG_INFO("Generating trees for label sizes {} to {}...", std::to_string(max + 1), std::to_string(N));
 
     sw.reset();
     spdlog::stopwatch total;
@@ -245,11 +244,10 @@ int main(int argc, char** argv) {
     // compute chains for size max + 1 to N and store in tree_arr
     for (int i = max + 1; i <= N; i++) {
       SPDLOG_INFO("calculating N = {}", i);
-      make_chains(i, tree_arr, IMAX, IMIN);
+      int trees_num = make_chains(i, db, IMAX, IMIN);
 
-      SPDLOG_DEBUG("computed {} trees", tree_arr[i - 1].size());
       if (print) {
-        for (Tree t : tree_arr[i - 1]) {
+        for (Tree t : db.get_trees(i)) {
           std::cout << t.to_string() << std::endl;
         }
       }
@@ -259,14 +257,14 @@ int main(int argc, char** argv) {
     sw.reset();
 
     // Writing to filesystem
-    SPDLOG_INFO("saving to {}", db.getDBpath());
-    for (int i = max + 1; i <= N; i++) {
-      SPDLOG_DEBUG("starting N = {}", i);
-      db.insert_trees(tree_arr[i - 1], i, false);
-    }
+    // SPDLOG_INFO("saving to {}", db.getDBpath());
+    // for (int i = max + 1; i <= N; i++) {
+    //   SPDLOG_DEBUG("starting N = {}", i);
+    //   db.insert_trees(tree_arr[i - 1], i, false);
+    // }
 
-    SPDLOG_INFO("finished write ({:.4f}s)", sw);
-    sw.reset();
+    // SPDLOG_INFO("finished write ({:.4f}s)", sw);
+    // sw.reset();
 
     if (!export_file.empty()) {
       SPDLOG_INFO("EXPORT IS CURRENTLY DISABLED exporting to {}", export_file);

@@ -22,7 +22,6 @@ class Tree {
 
   static Tree fromColumns(const SQLite::Column& idCol, const SQLite::Column& bCol, const SQLite::Column& dCol, label_size_t labelSize);
 
-
   double probability(int p);
   double term(double beta, int p, std::vector<double> interaction_arr);
   void append(Tree& tree, bool exclude_top = false);
