@@ -29,7 +29,7 @@ for N in range(enn, enn+1):
     # print(energies)
 
     branches = range(len(energies))
-    sizes = [bin(x).count("1") for x in branches]
+    sizes = [x.bit_count() for x in branches]
 
     # odd = N % 2
     # binom = [odd * math.comb(N-1, k-1) for k in range(1, N+1)]

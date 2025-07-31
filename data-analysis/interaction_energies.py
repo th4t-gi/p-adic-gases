@@ -10,7 +10,7 @@ energies = interaction_energy(set_charges)
 print("e_Js = ", energies)
 print("----")
 
-sizes = [bin(J).count("1") for J in range(len(energies))]
+sizes = [J.bit_count() for J in range(len(energies))]
 
 df_e = pd.DataFrame({
     # "index": range(len(energies)),
@@ -56,7 +56,7 @@ ax.set_xticks(range(len(energies)))
 ax.set_xticklabels(range(len(energies)))
 
 plt.show()
-enum_energies = [(bin(J).count("1"), e) for J, e in enumerate(energies) if e < 0]
+enum_energies = [(J.bit_count(), e) for J, e in enumerate(energies) if e < 0]
 for tup in np.array(enum_energies).tolist():
     print(tup)
 # print("----")

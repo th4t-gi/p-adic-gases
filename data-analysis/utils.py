@@ -10,7 +10,7 @@ def falling_factorial(x,n):
     return prod
 
 def factor(branch: int, degree: int, p: int, e_J: int, beta: float):
-    size_J = bin(branch).count("1")
+    size_J = branch.bit_count()
     denom = p**(size_J + (e_J * beta)) - p
     return falling_factorial(p, degree)/denom
 
@@ -18,7 +18,7 @@ def factor(branch: int, degree: int, p: int, e_J: int, beta: float):
 def weight(branches: List[int], p: int, energies: List[float], beta: float):
     total = 0.0
     for J in branches:
-        size_J = bin(J).count("1")
+        size_J = J.bit_count()
         e_J = energies[J]
         
         factor = e_J/(1-p**(1-size_J - (e_J*beta)))
@@ -29,7 +29,7 @@ def weight(branches: List[int], p: int, energies: List[float], beta: float):
 def double_weight(branches: List[int], p: int, energies: List[float], beta: float):
     total = 0.0
     for J in branches:
-        size_J = bin(J).count("1")
+        size_J = J.bit_count()
         e_J = energies[J]
         power = p**(1-size_J - (e_J*beta))
 
