@@ -2,6 +2,7 @@
 
 #include all these:
 !src
+!src/**
 !data-analysis
 
 !.gitignore
@@ -13,6 +14,8 @@
 !.vscode/**
 !ddl.txt
 !*.py
+!*.cpp
+!*.h
 !*.ipynb
 !physics.ipynb
 
