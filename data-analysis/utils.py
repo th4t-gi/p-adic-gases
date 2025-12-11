@@ -59,13 +59,15 @@ def interaction_energy(charges: List[int]):
 
 def query(n: int, primes: List[int], path = ".") -> pd.DataFrame:
     # create connection
-    dbname = f"{path}/size{n}.db"
+    dbname = f"{path}/trees.db"
     # print(dbname)
     con = sqlite3.connect(dbname)
+
+    print(dbname)
     
     # Read query results into a pandas DataFrame
-    query = "SELECT * FROM trees"
-    df = pd.read_sql_query(query, con).set_index(["id"])
+    query = f"SELECT * FROM trees{n}"
+    df = pd.read_sql_query(query, con)#.set_index([])
     con.close()
     
     return df

@@ -134,8 +134,8 @@ plt.rcParams.update({
 primes = [2, 3, 5, 7, 11]
 # charges_arr = [[1, 1, -1, -1], [5, 2, 1, -3], [-1, -2, -2, -3]]
 # beta_step_arr = [0.02, 0.0003, 0.05]
-charges_arr = [[5, 2, 1, -3]]
-beta_step_arr = [0.0003]
+charges_arr = [[1,-1,1,-1]]
+beta_step_arr = [0.01]
 num_plots = len(charges_arr)
 # num_plots = 1
 
@@ -178,7 +178,7 @@ for i, (step, charges) in enumerate(zip(beta_step_arr, charges_arr)):
     print(len(df))
     print(df.head(3))
 
-    prob_plt = TreePlt(df, primes, charges, step, subplots=True)
+    prob_plt = TreePlt(df, primes, charges, step, subplots=False)
     prob_figs.append(prob_plt)
     prob_plt.plot()
 
@@ -237,7 +237,7 @@ for i, (step, charges) in enumerate(zip(beta_step_arr, charges_arr)):
     Zfig.supxlabel(r'\boldmath$\beta$', fontsize=10)
     width, height = Zfig.get_size_inches()
     print(0.96, height)
-    Zfig.subplots_adjust(left=0.08, bottom=0.15, right=0.97, top=0.87, hspace=0.4)
+    Zfig.subplots_adjust(left=0.08, bottom=0.15, right=0.97, top=0.95, hspace=0.1)
 
 
 
@@ -249,8 +249,8 @@ plt.show()
 
 for prob in prob_figs:
      # Save animation after showing interactive plot
-    # save = input(f"Do you want to save \"{prob}\"? (y/n) ")
-    save = "n"
+    save = input(f"Do you want to save \"{prob}\"? (y/n) ")
+    # save = "n"
     if (save.lower() == "y"):
-        prob.save_beta_animation()
+        prob.save_beta_animation(total_time=10)
 
