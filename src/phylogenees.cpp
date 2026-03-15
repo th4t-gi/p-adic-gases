@@ -57,12 +57,10 @@ void make_chains(label_size_t N, std::vector<std::vector<Tree>>& local, code_t I
   code_t set_1toN = (1 << N) - 1;
   code_t elt_N = (1 << (N - 1));
 
-  Tree base_fork;
-  base_fork.branches.push_back(set_1toN);
-  base_fork.setSize = N;
+  const Tree base_fork({set_1toN}, N);
 
   // iterate over all subsets of {1,2,..., N-1} that have N-2 or fewer elements
-  for (code_t J = 0; J < elt_N - 1; J++) {
+  for (code_t J = 0; J < elt_N - 1; ++J) {
     Tree curr_fork = base_fork;
     // Grab number of bits in J and add it to the number of bits in N_max
     label_size_t right_chain_size = bit_length(J) + 1;

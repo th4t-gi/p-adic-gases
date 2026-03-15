@@ -12,7 +12,7 @@ from typing import List
 
 N = 4
 
-trees = query(N, [2], '..').loc[2]
+trees = query(N, '../trees.db')
 trees["branches"] = trees["branches"].apply(ast.literal_eval)
 trees["degrees"] = trees["degrees"].apply(ast.literal_eval)
 
