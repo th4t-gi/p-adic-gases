@@ -198,160 +198,33 @@ void APIWrapper::create_tree_table(label_size_t labelSize, bool is_filtered) {
   db.exec(stmt);
 }
 
-void TreesApi::import_csv(const std::string& file, const std::string& dbname, char seperator) {
-  std::string cmd = "sqlite3 " + this->filename + " '.mode csv' '.separator " + std::string{seperator} +
-                    "' '.import --skip 1 " + outDir + "/" + file + " " + dbname + "'";
-
-  // std::string cmd = fmt::format(
-  //   "sqlite3 {} '.mode csv' '.separator {}' '.import --skip 1 {}/{} {}'",
-  //   this->filename,
-  //   std::string{seperator},
-  //   outDir,
-  //   file,
-  //   dbname
-  // );
+void APIWrapper::import_csv(const std::string& file, const std::string& tablename, char seperator) {
+  std::string cmd = std::format(
+    "sqlite3 {} '.mode csv' '.separator {}' '.import --skip 1 {}/{} {}'",
+    dbpath,
+    std::string{seperator},
+    outDir,
+    file,
+    tablename
+  );
   SPDLOG_INFO("running: {}", cmd);
   system(cmd.c_str());
-  
-  int count = db(select(sqlpp::count(1)).from(trees).unconditionally()).front().count;
 
+  // int count = db(select(sqlpp::count(1)).from(treesTable).unconditionally()).front().count;
+
+  // SPDLOG_INFO("Imported {} rows", count);
 }
 
-void TreesApi::export_csv(const std::string& file, const std::string& dbname, char seperator) {
-  std::string cmd = "sqlite3 -header -csv -separator '" + std::string{seperator} + + "' " + this->filename + " 'select * from " + dbname + ";' > " + outDir + "/" + file;
-  // std::string cmd = fmt::format(
-  //   "sqlite3 -header -csv -separator '{}' {} 'select * from {};' > {}/{}",
-  //   std::string{seperator},
-  //   this->filename,
-  //   dbname,
-  //   outDir,
-  //   file
-  // );
+void APIWrapper::export_csv(const std::string& file, const std::string& tablename, char seperator) {
+  std::string cmd = std::format(
+    "sqlite3 -header -csv -separator '{}' {} 'select * from {};' > {}/{}",
+    std::string{seperator},
+    dbpath,
+    tablename,
+    outDir,
+    file
+  );
   SPDLOG_INFO("running: {}", cmd);
   system(cmd.c_str());
+  SPDLOG_INFO("exported to {}", file);
 }
-
-void TreesApi::reset_trees(label_size_t labelSize) {
-  std::string name = trees::Trees::_alias_t::_literal;
-
-  db(remove_from(trees).where(trees.labelSize > labelSize));
-
-  int count = db(select(sqlpp::count(1)).from(trees).unconditionally()).front().count;
-
-  auto query =
-    sqlpp::verbatim("UPDATE SQLITE_SEQUENCE SET SEQ=" + std::to_string(count) + " WHERE NAME='" + name + "'");
-  db.execute(query);
-}
-
-label_size_t TreesApi::get_max_label_size() {
-  auto result = db(select(max(trees.labelSize)).from(trees).unconditionally());
-
-  if (!result.empty()) {
-    return result.front().max;
-  }
-  return 0;
-}
-
-std::vector<Tree> TreesApi::get_trees(label_size_t labelSize) {
-  std::vector<Tree> out;
-
-  auto select_stmt = db.prepare(select(all_of(trees)).from(trees).where(trees.labelSize == labelSize));
-
-  for (auto& row : db(select_stmt)) {
-    std::vector<code_t> branches = json::parse(row.branches.text).get<std::vector<code_t>>();
-    std::vector<degree_t> degrees = json::parse(row.degrees.text).get<std::vector<degree_t>>();
-    Tree new_tree(row.id.value(), branches, row.labelSize.value(), degrees);
-
-    out.push_back(new_tree);
-  }
-
-  return out;
-}
-
-int TreesApi::insert_tree(const Tree& t) {
-  json branchesArr = t.branches;
-  json degreesArr = t.degrees;
-
-  try {
-    db(insert_into(trees).set(
-      trees.labelSize = static_cast<int64_t>(t.setSize),
-      trees.branches = branchesArr.dump(),
-      trees.degrees = degreesArr.dump()
-    ));
-  } catch (const std::exception& e) {
-    std::cerr << e.what() << std::endl;
-    return 1;
-  }
-
-
-  return 0;
-}
-
-int TreesApi::insert_trees(const std::vector<Tree>& tr, label_size_t N) {
-
-  static constexpr size_t CHUNK_SIZE = 100000;
-
-  for (int i = 0; i < tr.size(); i += CHUNK_SIZE) {
-    auto multi_insert = insert_into(trees).columns(trees.labelSize, trees.branches, trees.degrees);
-    multi_insert.values._data._insert_values.reserve(tr.size());
-
-    for (int j = i; j < i + CHUNK_SIZE && j < tr.size(); ++j) {
-      const Tree& t = tr[j];
-
-      multi_insert.values.add(
-        trees.labelSize = static_cast<int64_t>(t.setSize),
-        trees.branches = vectorToJsonString(t.branches),
-        trees.degrees = vectorToJsonString(t.degrees)
-      );
-    }
-
-    try {
-      db.execute("BEGIN TRANSACTION");
-      db(multi_insert);
-      db.execute("COMMIT");
-      std::cout << "\r[insert_trees]" << (N ? " N = " + std::to_string(N) : " ") << " batch " << i / CHUNK_SIZE + 1
-                << " saved" << std::flush;
-    } catch (const std::exception& e) {
-      std::cerr << e.what() << std::endl;
-      return 1;
-    }
-  }
-  std::cout << std::endl;
-
-
-  return 0;
-}
-
-namespace trees {
-
-auto get_block(connection& db, int id = 0) {
-  trees::Blocks blocks;
-  auto select_stmt = db.prepare(select(all_of(blocks)).from(blocks).where(blocks.blockId == parameter(blocks.blockId)));
-
-  select_stmt.params.blockId = id;
-  return db(select_stmt);
-}
-
-int insert_block(connection& db, int id, std::string setStr, int size) {
-  trees::Blocks blocks;
-
-  try {
-    auto insert_stmt = db.prepare(insert_into(blocks).set(
-      blocks.blockId = parameter(blocks.blockId),
-      blocks.setStr = parameter(blocks.setStr),
-      blocks.labelSize = parameter(blocks.labelSize)
-    ));
-
-    insert_stmt.params.blockId = id;
-    insert_stmt.params.setStr = setStr;
-    insert_stmt.params.labelSize = size;
-
-    db(insert_stmt);
-  } catch (const std::exception& e) {
-    std::cerr << e.what() << std::endl;
-    return 1;
-  }
-
-  return 0;
-}
-}  // namespace trees
