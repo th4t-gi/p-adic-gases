@@ -15,7 +15,7 @@ total_charge = sum(q_i)
 print(energies)
 
 branches = range(len(energies))
-sizes = [bin(x).count("1") for x in branches]
+sizes = [x.bit_count() for x in branches]
 
 
 # Group energies by size and calculate average for each size

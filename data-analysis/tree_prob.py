@@ -32,9 +32,9 @@ class TreePlt:
         self.energies = interaction_energy(self.set_charges)
         self.beta_vals = self.df.index.get_level_values("beta").unique()
         self.tree_ids = self.df.index.get_level_values('tree_id').unique()
-        self.tree_labels = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26]
         self.n_trees = n_trees if n_trees > 0 and n_trees < len(
             self.tree_ids) else len(self.tree_ids)
+        self.tree_labels = range(1, self.n_trees+1) # since range is exclusive
         
         self.fig_size = (10, 3)
 
@@ -151,7 +151,7 @@ class TreePlt:
                 sort_by = self.sort_by if hasattr(self, "sort_by") else p
                 sorted_idx = self.get_sort_index(beta, sort_by)
                 sorted_tree_ids = np.array(self.tree_ids)[sorted_idx]
-                # ax.set_xticklabels(sorted_tree_ids)
+                ax.set_xticklabels(sorted_tree_ids)
 
 
                 probs = self.df["phys_prob"][(p, beta)]
@@ -168,7 +168,7 @@ class TreePlt:
 
     def get_sort_index(self, beta, p=None, init=False):
         sort_idx = None
-        beta = 0 if self.init_sort_only else beta
+        beta = self.beta_vals[0] if self.init_sort_only else beta
 
         if self.init_sort_only and hasattr(self, "sort_idx"):
             return self.sort_idx
@@ -177,12 +177,12 @@ class TreePlt:
         elif init:
             if hasattr(self, "sort_by"):
                 sort_probs = self.df["phys_prob"][(self.sort_by, beta)]
-                sort_idx = np.argsort(-np.array(sort_probs), stable=True)
+                sort_idx = np.argsort(-np.array(sort_probs), kind="stable")
             else:
                 sort_idx = np.arange(len(self.tree_ids))
         elif p:
             sort_probs = self.df["phys_prob"][(p, beta)]
-            sort_idx = np.argsort(-np.array(sort_probs), stable=True)
+            sort_idx = np.argsort(-np.array(sort_probs), kind="stable")
 
         self.sort_idx = sort_idx[:self.n_trees]
         return self.sort_idx
