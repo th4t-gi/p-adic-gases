@@ -134,7 +134,7 @@ plt.rcParams.update({
 primes = [2, 3, 5, 7, 11]
 # charges_arr = [[1, 1, -1, -1], [5, 2, 1, -3], [-1, -2, -2, -3]]
 # beta_step_arr = [0.02, 0.0003, 0.05]
-charges_arr = [[1,-1,1,-1]]
+charges_arr = [[2,-2,1,-1,1]]
 beta_step_arr = [0.01]
 num_plots = len(charges_arr)
 # num_plots = 1
@@ -159,9 +159,9 @@ for i, (step, charges) in enumerate(zip(beta_step_arr, charges_arr)):
     sig_minus = 1/abs(q_max*q_min)
     if q_max*q_min >= 0:
         sig_minus = 2
-    sig_plus = 0 + step
+    sig_plus = -step
     # caluclates array of values with given beta_step between (-\sigma^+, \sigma^-)
-    beta_vals = np.arange(-sig_plus, sig_minus, step)
+    beta_vals = np.arange(sig_plus, sig_minus, step)
     # excludes endpoints
     beta_vals = beta_vals[1:]
 
