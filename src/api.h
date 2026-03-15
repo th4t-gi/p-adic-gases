@@ -1,6 +1,7 @@
 #pragma once
 
 #include <SQLiteCpp/SQLiteCpp.h>
+#include <spdlog/fmt/chrono.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/stopwatch.h>
 
@@ -17,6 +18,10 @@ using json = nlohmann::json;
 
 class APIWrapper {
  public:
+  static const size_t BATCH_READ_SIZE = 10000;
+  static const size_t BATCH_COMPUTE_SIZE = 500000;
+  static const size_t BATCH_WRITE_SIZE = 100000;
+
   bool verbose;
   SQLite::Database db;
 
@@ -24,14 +29,16 @@ class APIWrapper {
   std::string getDBpath();
 
   int get_max_label_size();
-  Tree get_tree(uint64_t treeId, label_size_t labelSize, bool is_filtered);
-  std::vector<Tree> get_trees(label_size_t labelSize, bool is_filtered);
-  std::string get_tree_table(label_size_t labelSize, bool is_filtered);
+  Tree get_tree(uint64_t treeId, label_size_t labelSize, bool is_filtered = false);
+  std::vector<Tree> get_trees(label_size_t labelSize, bool is_filtered = false);
+  std::string get_tree_table(label_size_t labelSize, bool is_filtered = false);
 
-  int insert_tree(const Tree& t, bool is_filtered);
-  int insert_trees(const std::vector<Tree>& trees, label_size_t labelSize, bool is_filtered);
+  int insert_tree(const Tree& t, bool is_filtered = false);
+  int insert_trees(
+    const std::vector<Tree>& trees, label_size_t labelSize, bool is_filtered = false
+  );
   void reset_trees(label_size_t labelSize = 0);
-  void create_tree_table(label_size_t labelSize, bool is_filtered);
+  void create_tree_table(label_size_t labelSize, bool is_filtered = false);
 
   void import_csv(const std::string& file, const std::string& tablename, char seperator);
   void export_csv(const std::string& file, const std::string& tablename, char seperator);

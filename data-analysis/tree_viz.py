@@ -15,14 +15,7 @@ from collections import Counter
 from itertools import permutations
 
 
-FIG_WIDTH = 4
-FIG_HEIGHT = 4
-
-# Get label size from command line, otherwise do N = 4
-N = int(sys.argv[1]) if len(sys.argv) > 1 else 4
-
-#Import tree data from sql database
-trees = query(N, [2], "..")
+trees = query(N, '../trees.db')
 trees["branches"] = trees["branches"].apply(ast.literal_eval)
 trees["degrees"] = trees["degrees"].apply(ast.literal_eval)
 

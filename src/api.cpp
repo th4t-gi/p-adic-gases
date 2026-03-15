@@ -23,6 +23,7 @@ std::string APIWrapper::getDBpath() { return dbpath; }
 int APIWrapper::get_max_label_size() { return db.execAndGet("SELECT MAX(label_size) FROM trees_sequence").getInt(); }
 
 Tree APIWrapper::get_tree(uint64_t treeId, label_size_t labelSize, bool is_filtered) {
+  spdlog::stopwatch sw;
   std::string tbl_name = get_tree_table(labelSize, is_filtered);
   Tree t;
 
@@ -33,10 +34,21 @@ Tree APIWrapper::get_tree(uint64_t treeId, label_size_t labelSize, bool is_filte
     query.executeStep();
     t = Tree::fromColumns(query.getColumn(0), query.getColumn(1), query.getColumn(2), query.getColumn(3));
   }
+
+  SPDLOG_DEBUG(
+    "loaded tree id {} from label size {} ({}) ({} bytes stack, {} bytes heap)",
+    t.id,
+    labelSize,
+    sw.elapsed_ms(),
+    sizeof(t),
+    t.branches.capacity() + t.degrees.capacity()
+  );
+
   return t;
 }
 
 std::vector<Tree> APIWrapper::get_trees(label_size_t labelSize, bool is_filtered) {
+  spdlog::stopwatch sw;
   std::string tbl_name = get_tree_table(labelSize, is_filtered);
   std::vector<Tree> trees;
 
@@ -53,6 +65,10 @@ std::vector<Tree> APIWrapper::get_trees(label_size_t labelSize, bool is_filtered
       std::cout << e.what() << std::endl;
     }
   }
+
+  // int space = trees.capacity() * sizeof(Tree);
+  SPDLOG_DEBUG("loaded {} trees of label size {} ({})", trees.size(), labelSize, sw.elapsed_ms());
+
   return trees;
 }
 
@@ -83,25 +99,24 @@ int APIWrapper::insert_tree(const Tree& t, bool is_filtered) {
 
 int APIWrapper::insert_trees(const std::vector<Tree>& trees, label_size_t labelSize, bool is_filtered) {
   spdlog::stopwatch sw;
+  SPDLOG_DEBUG("saving {} trees", trees.size());
 
   std::string tbl_name = get_tree_table(labelSize, is_filtered);
   if (!db.tableExists(tbl_name)) {
     create_tree_table(labelSize, is_filtered);
   }
 
-  static constexpr size_t CHUNK_SIZE = 100000;
-
   db.exec("PRAGMA synchronous = OFF");
   db.exec("PRAGMA journal_mode = MEMORY");
 
-  for (int i = 0; i < trees.size(); i += CHUNK_SIZE) {
+  for (int i = 0; i < trees.size(); i += BATCH_WRITE_SIZE) {
     // START BATCH TRANSACTION
     SQLite::Transaction transaction(db);
 
     std::string stmt = std::format("INSERT INTO {} VALUES (?, ?)", tbl_name);
     SQLite::Statement query(db, stmt);
 
-    for (int j = i; j < i + CHUNK_SIZE && j < trees.size(); ++j) {
+    for (int j = i; j < i + BATCH_WRITE_SIZE && j < trees.size(); ++j) {
       // insert individual tree
       const Tree& t = trees[j];
 
@@ -112,22 +127,21 @@ int APIWrapper::insert_trees(const std::vector<Tree>& trees, label_size_t labelS
       try {
         query.exec();
         query.reset();
-        std::cout << "\r[insert_trees]" << (labelSize ? " N = " + std::to_string(labelSize) : " ") << " batch "
-                  << i / CHUNK_SIZE + 1 << " saved" << std::flush;
+        // std::cout << "\r[insert_trees]" << (labelSize ? " N = " + std::to_string(labelSize) : " ") << " batch "
+        //           << i / BATCH_SIZE + 1 << " saved" << std::flush;
       } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
-
         return 1;
       }
     }
     transaction.commit();
     // FINISH BATCH TRANSACTION
   }
-  std::cout << std::endl;
+  // std::cout << std::endl;
   db.exec("PRAGMA synchronous = FULL");
 
-
-  return 0;
+  SPDLOG_INFO("{} batches saved", trees.size() / BATCH_WRITE_SIZE + 1);
+  return trees.size();
 }
 
 void APIWrapper::reset_trees(label_size_t labelSize) {
@@ -147,6 +161,7 @@ void APIWrapper::reset_trees(label_size_t labelSize) {
       for (const auto& table : tables_to_drop) {
         std::string dropStmt = std::format("DROP TABLE IF EXISTS {}", table);
         db.exec(dropStmt);
+        SPDLOG_DEBUG("dropped table {}", table);
       }
     }
 
