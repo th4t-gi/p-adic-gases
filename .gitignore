@@ -1,25 +1,7 @@
-*
-
-#include all these:
-!src
-!src/**
-!data-analysis
-
-!.gitignore
-!.clang-format
-!Makefile
-# !trees.db
-!sqlite2cpp.py
-!.vscode
-!.vscode/**
-!ddl.txt
-!*.py
-!*.cpp
-!*.h
-!*.ipynb
-!physics.ipynb
-
-# exclude all these:
 **/.DS_Store
 test.cpp
 __pycache__
+
+build
+out
+data
