@@ -38,9 +38,13 @@ HDRS := $(wildcard $(SRC_DIR)/*.h)
 TEST := test
 TEST_BIN := $(BUILD_DIR)/$(TEST)
 
-.PHONY: all clean fresh test
+.PHONY: all clean fresh test app
 
 all: $(EXEC_BINS)
+
+# Run CANO.PY once
+app:
+	python3 -m app
 
 fresh:
 	make clean && make all
