@@ -1,15 +1,15 @@
-"""Pure-math helpers shared between the launch form and run logic.
-
-Mirrors the formulas in data-analysis/physics.py (lines ~150-170): given a list
-of charges and a beta step, derive the critical inverse-temperature β_c and the
-β-grid that the partition-function sweep will use.
-"""
+"""Non-physics helpers: input parsing, DB I/O, and combinatorial counts."""
 
 from __future__ import annotations
 
+import ast
 import math
+import sqlite3
 from fractions import Fraction
 from functools import lru_cache
+from pathlib import Path
+
+import pandas as pd
 
 
 def parse_int_list(text: str) -> list[int]:
@@ -26,26 +26,34 @@ def parse_int_list(text: str) -> list[int]:
     return [int(p) for p in parts]
 
 
-def beta_critical(charges: list[int]) -> float:
-    """β_c = 1/|q_max · q_min| when charges have mixed signs, else 2."""
-    if not charges:
-        raise ValueError("charges is empty")
-    q_max = max(charges)
-    q_min = min(charges)
-    if q_max * q_min >= 0:
-        return 2.0
-    return 1.0 / abs(q_max * q_min)
+def falling_factorial(x: float, n: int) -> float:
+    prod = 1.0
+    for i in range(0, n):
+        prod *= x - i
+    return prod
 
 
-def beta_value_count(charges: list[int], step: float) -> int:
-    """Number of β values that ``np.arange(-step, β_c, step)[1:]`` will produce."""
-    if step <= 0:
-        raise ValueError("step must be positive")
-    bc = beta_critical(charges)
-    # np.arange(-step, bc, step) -> count = ceil((bc - (-step)) / step)
-    n = max(0, math.ceil((bc + step) / step))
-    # the [1:] slice in physics.py drops the first element (-step)
-    return max(0, n - 1)
+def default_db_path() -> Path:
+    """`<repo-root>/data/trees.db` derived from this file's location."""
+    return Path(__file__).resolve().parents[2] / "data" / "trees.db"
+
+
+def tree_image_path(n: int, tree_id: int) -> Path:
+    """`<repo-root>/out/treesN/tree_<id>.png` — produced by data-analysis/tree_viz.py."""
+    return Path(__file__).resolve().parents[2] / "out" / f"trees{n}" / f"tree_{tree_id}.png"
+
+
+def load_trees(n: int, db_path: Path | None = None) -> pd.DataFrame:
+    """Load `treesN` from the SQLite DB, with branches/degrees parsed from JSON."""
+    path = db_path or default_db_path()
+    con = sqlite3.connect(str(path))
+    try:
+        df = pd.read_sql_query(f"SELECT rowid, * FROM trees{n}", con).set_index(["rowid"])
+    finally:
+        con.close()
+    df["branches"] = df["branches"].apply(ast.literal_eval)
+    df["degrees"] = df["degrees"].apply(ast.literal_eval)
+    return df
 
 
 @lru_cache(maxsize=None)

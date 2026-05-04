@@ -14,8 +14,9 @@ from PySide6.QtWidgets import (
 )
 
 from app import APP_NAME, APP_TITLE, APP_SUBTITLE
-from app.physics import beta_critical, beta_value_count, parse_int_list, phylogenetic_tree_count
-from app.plots import PLOT_SPECS, PlotKind
+from app.computations.physics import beta_critical, beta_value_count
+from app.computations.utils import parse_int_list, phylogenetic_tree_count
+from app.plots import PLOT_SPECS, PlotKind, RunConfig
 from app.windows.run_window import RunWindow
 
 
@@ -77,7 +78,7 @@ class LaunchWindow(QMainWindow):
             group_layout = QVBoxLayout(group)
             for spec in specs:
                 checkbox = QCheckBox(spec.label)
-                if spec.key == "partition":
+                if spec.key in ["partition", "probability_per_tree"]:
                     checkbox.setChecked(True)
                 self._plot_checkboxes[spec.key] = checkbox
                 group_layout.addWidget(checkbox)
@@ -85,8 +86,9 @@ class LaunchWindow(QMainWindow):
             plots_group.addWidget(group)
 
         self.run_btn = QPushButton("Run")
-        cancel_btn = QPushButton("Cancel")
         self.run_btn.clicked.connect(self._open_run_window)
+        self.run_btn.setDefault(True)
+        cancel_btn = QPushButton("Cancel")
         cancel_btn.clicked.connect(self.close)
 
         button_row = QHBoxLayout()
@@ -189,7 +191,13 @@ class LaunchWindow(QMainWindow):
         if not self._validate_inputs():
             return
 
-        run_window = RunWindow()
+        config = RunConfig(
+            charges=parse_int_list(self.charges_input.text()),
+            primes=parse_int_list(self.primes_input.text()),
+            beta_step=self.step_input.value(),
+            plot_keys=self.selected_plot_keys(),
+        )
+        run_window = RunWindow(config)
         run_window.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         run_window.destroyed.connect(lambda: self._open_runs.remove(run_window))
         self._open_runs.append(run_window)

@@ -3,3 +3,6 @@
 
 PySide6>=6.11
 watchdog>=6.0  # provides `watchmedo` for `make dev`
+numpy>=1.26
+pandas>=2.2
+matplotlib>=3.10
