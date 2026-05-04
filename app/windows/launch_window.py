@@ -1,3 +1,5 @@
+import traceback
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -8,6 +10,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -197,7 +200,11 @@ class LaunchWindow(QMainWindow):
             beta_step=self.step_input.value(),
             plot_keys=self.selected_plot_keys(),
         )
-        run_window = RunWindow(config)
+        try:
+            run_window = RunWindow(config)
+        except Exception:
+            QMessageBox.critical(self, "Failed to open run", traceback.format_exc())
+            return
         run_window.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         run_window.destroyed.connect(lambda: self._open_runs.remove(run_window))
         self._open_runs.append(run_window)

@@ -10,7 +10,9 @@ from PySide6.QtWidgets import (
 )
 
 from app.computations.computation import RunComputation
-from app.plots import PLOT_REGISTRY, SPEC_BY_KEY, RunConfig
+from app.plots import PLOT_REGISTRY, SPEC_BY_KEY, PlotSpec, RunConfig
+from app.plots.base import BasePlot
+from app.windows.export_window import ExportWindow
 
 
 class RunWindow(QMainWindow):
@@ -29,7 +31,7 @@ class RunWindow(QMainWindow):
         df = self._computation.run()
 
         tabs = QTabWidget()
-        self._plots = []
+        self._plots: list[tuple[PlotSpec, BasePlot]] = []
         for key in config.plot_keys:
             spec = SPEC_BY_KEY.get(key)
             cls = PLOT_REGISTRY.get(key)
@@ -37,7 +39,7 @@ class RunWindow(QMainWindow):
                 continue
             plot = cls(df, self._computation)
             plot.render()
-            self._plots.append(plot)
+            self._plots.append((spec, plot))
             tabs.addTab(plot.widget(), spec.label)
 
         if tabs.count() == 0:
@@ -48,7 +50,8 @@ class RunWindow(QMainWindow):
         exit_btn = QPushButton("Close")
         exit_btn.clicked.connect(self.close)
         exit_btn.setDefault(True)
-        export_btn = QPushButton("Export to")
+        export_btn = QPushButton("Export to…")
+        export_btn.clicked.connect(self._open_export)
 
         button_row = QHBoxLayout()
         button_row.addStretch(1)
@@ -62,3 +65,6 @@ class RunWindow(QMainWindow):
         central = QWidget()
         central.setLayout(body)
         self.setCentralWidget(central)
+
+    def _open_export(self) -> None:
+        ExportWindow(self._plots, parent=self).exec()

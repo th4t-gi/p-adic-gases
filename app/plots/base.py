@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pandas as pd
@@ -15,6 +16,8 @@ if TYPE_CHECKING:
 
 
 class BasePlot(ABC):
+    supports_video: bool = False
+
     def __init__(self, df: pd.DataFrame, computation: "RunComputation") -> None:
         self.df = df
         self.computation = computation
@@ -27,6 +30,9 @@ class BasePlot(ABC):
 
     def widget(self) -> QWidget:
         return FigureCanvasQTAgg(self.fig)
+
+    def export_video(self, path: Path, fps: float = 10.0) -> None:
+        raise NotImplementedError(f"{type(self).__name__} does not support video export")
 
     def _stub(self, message: str = "Not yet implemented") -> None:
         ax = self.fig.add_subplot(111)

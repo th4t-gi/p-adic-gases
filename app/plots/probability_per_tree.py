@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import matplotlib.image as mpimg
 import numpy as np
+from pathlib import Path
 import pandas as pd
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
@@ -34,6 +35,29 @@ _PRIME_PREFIX = "p = "
 
 
 class ProbabilityPerTreePlot(BasePlot):
+    supports_video = True
+
+    def export_video(self, path: Path, fps: float = 10.0) -> None:
+        from matplotlib.animation import FFMpegWriter, FuncAnimation
+
+        beta_vals = self.computation.beta_vals
+        saved_idx = self._beta_idx
+
+        def update(frame_idx: int) -> list:
+            self._beta_idx = frame_idx
+            self._ax.clear()
+            self._draw_for_state()
+            return []
+
+        anim = FuncAnimation(self.fig, update, frames=len(beta_vals), blit=False)
+        anim.save(str(path), writer=FFMpegWriter(fps=fps))
+
+        self._beta_idx = saved_idx
+        self._ax.clear()
+        self._draw_for_state()
+        if hasattr(self, "_canvas"):
+            self._canvas.draw_idle()
+
     def render(self) -> None:
         beta_vals = self.computation.beta_vals
         if len(beta_vals) == 0:
