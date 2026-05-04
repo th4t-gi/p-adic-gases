@@ -51,6 +51,19 @@ def factor(branch: int, degree: int, p: int, e_J: float, beta: float) -> float:
     denom = p ** (size_J + (e_J * beta)) - p
     return falling_factorial(p, degree) / denom
 
+def q_term(branches: List[int], p: int, energies: np.ndarray, beta: float) -> float:
+    out = 1.0
+    for J in branches:
+        size_J = J.bit_count()
+        denom = p ** (size_J + (energies[J] * beta)) - p
+        out *= (1/denom)
+    return out
+
+def c_term(degrees: List[int], p: int) -> float:
+    out = 1.0
+    for degree in degrees:
+        out *= falling_factorial(p, degree)
+    return out
 
 def weight(branches: List[int], p: int, energies: np.ndarray, beta: float) -> float:
     total = 0.0
@@ -76,6 +89,9 @@ def term(branches: List[int], degrees: List[int], p: int, energies: np.ndarray, 
     for J, degree in zip(branches, degrees):
         out *= factor(J, degree, p, energies[J], beta)
     return out
+
+def term_alt(branches: List[int], degrees: List[int], p: int, energies: np.ndarray, beta: float) -> float:
+    return c_term(degrees, p) * q_term(branches, p, energies, beta)
 
 
 def interaction_energy(charges: list[int]) -> np.ndarray:

@@ -48,7 +48,7 @@ def load_trees(n: int, db_path: Path | None = None) -> pd.DataFrame:
     path = db_path or default_db_path()
     con = sqlite3.connect(str(path))
     try:
-        df = pd.read_sql_query(f"SELECT rowid, * FROM trees{n}", con).set_index(["rowid"])
+        df = pd.read_sql_query(f"SELECT rowid, * FROM trees{n}", con).set_index(["rowid"]).rename_axis(["tree_id"])
     finally:
         con.close()
     df["branches"] = df["branches"].apply(ast.literal_eval)

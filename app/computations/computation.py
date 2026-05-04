@@ -16,6 +16,8 @@ from app.computations.physics import (
     double_weight,
     interaction_energy,
     term,
+    q_term,
+    c_term,
     weight,
 )
 from app.computations.utils import load_trees
@@ -28,7 +30,8 @@ class RunComputation:
         self.db_path = db_path
         self.energies: np.ndarray = interaction_energy(config.charges)
         self.beta_vals: np.ndarray = beta_grid(config.charges, config.beta_step)
-        self._df: pd.DataFrame | None = None
+        self._physics_df: pd.DataFrame | None = None
+        self._trees_df: pd.DataFrame | None = None
 
     @property
     def n(self) -> int:
@@ -36,10 +39,20 @@ class RunComputation:
 
     def run(self) -> pd.DataFrame:
         """Build the (prime, beta, tree_id)-indexed DataFrame and cache it."""
-        if self._df is not None:
-            return self._df
+        if self._physics_df is not None:
+            return self._physics_df
 
         trees = load_trees(self.n, self.db_path)
+        for p in self.config.primes:
+            # Creates Series of whether tree is a q-tree or not
+            trees[f"is_{p}_tree"] = trees["degrees"].apply(lambda degs, p=p: all(d <= p for d in degs))
+            # Computes $\prod_{J\in B(\tree)} (p)_{c_\tree(J)}$ for all trees
+            trees[f"{p}_comb_prod"] = trees["degrees"].apply(lambda degs, p=p: c_term(degs, p))
+
+
+        self._trees_df = trees
+        # print(trees)
+        
         energies = self.energies
         df_arr: list[pd.DataFrame] = []
 
@@ -51,6 +64,16 @@ class RunComputation:
                 )
                 total = terms.sum()
                 probs = terms / total
+
+                phys_terms = trees.apply(
+                    lambda row, p=p, beta=beta: q_term(row["branches"], p, energies, beta),
+                    axis=1,
+                )
+                comb_terms = trees.apply(
+                    lambda row, p=p: c_term(row["degrees"], p),
+                    axis=1,
+                )
+                terms2 = phys_terms * comb_terms
 
                 weights = trees.apply(
                     lambda row, p=p, beta=beta: weight(row["branches"], p, energies, beta),
@@ -68,6 +91,9 @@ class RunComputation:
                             "beta": beta,
                             "tree_id": trees.index,
                             "term": terms,
+                            "term2": terms2,
+                            "phys_term": phys_terms,
+                            "comb_term": comb_terms,
                             "phys_prob": probs,
                             "weight": weights,
                             "double_weight": doubles,
@@ -76,5 +102,14 @@ class RunComputation:
                 )
 
         df = pd.concat(df_arr).set_index(["prime", "beta", "tree_id"])
-        self._df = df
+        self._physics_df = df
+
+        # import tempfile
+        # import webbrowser
+        # from itables import to_html_datatable
+
+        # html = f"<!DOCTYPE html><html><body>{to_html_datatable(df, column_filters='header')}</body></html>"
+        # with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
+        #     f.write(html)
+        #     webbrowser.open(f"file://{f.name}")
         return df

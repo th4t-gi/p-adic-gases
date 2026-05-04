@@ -41,7 +41,7 @@ class RunConfig:
 
 
 PLOT_SPECS: tuple[PlotSpec, ...] = (
-    PlotSpec("partition", "Z_N(β)", PlotKind.BETA),
+    PlotSpec("partition", "Partition Function", PlotKind.BETA),
     PlotSpec("probability_per_tree", "Probability per Tree", PlotKind.PER_TREE),
     PlotSpec("expected_alteration", "Expected Alteration", PlotKind.BETA),
     PlotSpec("alteration_per_tree", "Alteration per Tree", PlotKind.PER_TREE),
