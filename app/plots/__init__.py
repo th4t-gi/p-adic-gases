@@ -46,12 +46,14 @@ PLOT_SPECS: tuple[PlotSpec, ...] = (
     PlotSpec("expected_alteration", "Expected Alteration", PlotKind.BETA),
     PlotSpec("alteration_per_tree", "Alteration per Tree", PlotKind.PER_TREE),
     PlotSpec("max_quotient", "Max Quotient per Beta", PlotKind.BETA),
-    PlotSpec("quotient_per_tree", "Quotient per tree", PlotKind.PER_TREE),
+    PlotSpec("quotient_per_tree", "Quotient per Tree", PlotKind.PER_TREE),
+    PlotSpec("combinatorial_per_tree", "Combinatorial per Tree", PlotKind.PER_TREE),
 )
 
 
 from app.plots.alteration_per_tree import AlterationPerTreePlot
 from app.plots.base import BasePlot
+from app.plots.combinatorial_per_tree import CombinatorialPerTreePlot
 from app.plots.expected_alteration import ExpectedAlterationPlot
 from app.plots.max_quotient import MaxQuotientPlot
 from app.plots.partition import PartitionPlot
@@ -65,6 +67,7 @@ PLOT_REGISTRY: dict[str, type[BasePlot]] = {
     "alteration_per_tree": AlterationPerTreePlot,
     "max_quotient": MaxQuotientPlot,
     "quotient_per_tree": QuotientPerTreePlot,
+    "combinatorial_per_tree": CombinatorialPerTreePlot,
 }
 
 SPEC_BY_KEY: dict[str, PlotSpec] = {s.key: s for s in PLOT_SPECS}
