@@ -54,12 +54,28 @@ endif()
 configure_file(cmake/git_info.h.in ${CMAKE_BINARY_DIR}/git_info.h @ONLY)
 
 # ---------------------------------------------------------------------------
-# System-level dependencies (SQLite3, SQLiteCpp, Boost)
+# System-level dependencies (SQLite3, Boost)
 # These are best installed via the system package manager or vcpkg on Windows.
 # ---------------------------------------------------------------------------
-find_package(SQLite3   REQUIRED)
-find_package(SQLiteCpp REQUIRED)
-find_package(Boost     REQUIRED COMPONENTS program_options)
+find_package(SQLite3 REQUIRED)
+find_package(Boost   REQUIRED COMPONENTS program_options)
+
+# ---------------------------------------------------------------------------
+# SQLiteCpp — try system install, fall back to FetchContent
+# ---------------------------------------------------------------------------
+find_package(SQLiteCpp QUIET)
+if(NOT SQLiteCpp_FOUND)
+  FetchContent_Declare(SQLiteCpp
+    GIT_REPOSITORY https://github.com/SRombauts/SQLiteCpp.git
+    GIT_TAG        3.3.2
+    GIT_SHALLOW    TRUE
+  )
+  set(SQLITECPP_RUN_CPPLINT    OFF CACHE BOOL "" FORCE)
+  set(SQLITECPP_RUN_CPPCHECK   OFF CACHE BOOL "" FORCE)
+  set(SQLITECPP_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+  set(SQLITECPP_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
+  FetchContent_MakeAvailable(SQLiteCpp)
+endif()
 
 # ---------------------------------------------------------------------------
 # fmt, spdlog, nlohmann_json — try system install, fall back to FetchContent

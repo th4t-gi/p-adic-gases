@@ -51,24 +51,49 @@ for each tree in $\mathcal{R}_N$ and still efficently compute $\mathcal{Z}_N(\be
 
 ## Installation
 
+### Building the tree generator (`build/main`)
+
+The C++ tree generator enumerates all phylogenetic trees up to a given N and writes them to `data/trees.db`. It requires CMake ≥ 3.20, plus `sqlite3` and `boost` installed via your system package manager. All other dependencies (`fmt`, `spdlog`, `nlohmann_json`, `SQLiteCpp`) are fetched automatically.
+
+```sh
+# macOS
+brew install sqlite3 boost
+
+# Linux (apt)
+sudo apt install libsqlite3-dev libboost-program-options-dev
+```
+
+```sh
+cmake -B build          # configure (Release)
+cmake --build build     # compile → build/main
+```
+
+Run the generator:
+
+```sh
+build/main <N> -d data/trees.db
+```
+
+This populates `data/trees.db` with tables `trees1` through `treesN`. Pass `--ignore-changes` to skip the interactive prompt, or `--reset <K>` to truncate everything above leaf size K and regenerate from there.
+
+### Installing Dependencies for CANO.PY
+
 CANO.PY lives in [`app/`](app/) and is built on [PySide6](https://doc.qt.io/qtforpython-6/). To install, run from the repo root:
 
 ```sh
-python3 -m venv .venv
+python -m venv .venv
 source .venv/bin/activate
 pip install -r app/requirements.txt
 ```
 
 This creates a virtual environment, activates the venv, and installs required packages.
 
-## Usage
+### Running CANO.PY
 
 Launch the app:
 
 ```sh
-make app
-# or, equivalently:
-python3 -m app
+python -m app
 ```
 
 The launcher window takes a list of charges, a list of primes, and a β resolution. Clicking **Run** opens a separate window for each computation so you can compare behavior between runs.
@@ -85,7 +110,7 @@ make dev
 
 - see websters papers
 - oeis A000311
--
+- Claude Code
 
 ## Acknowledgements
 

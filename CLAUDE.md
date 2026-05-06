@@ -12,17 +12,17 @@ Computational research code for the *p-adic Gas Canonical Partition Calculator* 
 
 ## Build & run
 
-C++ side (CMake ≥ 3.20). `fmt`, `spdlog`, and `nlohmann_json` are fetched automatically if not found. `sqlite3`, `SQLiteCpp`, and `boost` must be installed manually:
+C++ side (CMake ≥ 3.20). `fmt`, `spdlog`, `nlohmann_json`, and `SQLiteCpp` are fetched automatically if not found. `sqlite3` and `boost` must be installed manually:
 
 ```sh
 # macOS (Homebrew — prefix detected automatically)
-brew install sqlite3 sqlitecpp boost
+brew install sqlite3 boost
 
 # Linux (apt)
-sudo apt install libsqlite3-dev libsqlitecpp-dev libboost-program-options-dev
+sudo apt install libsqlite3-dev libboost-program-options-dev
 
 # Windows — install vcpkg, then:
-# vcpkg install sqlite3 sqlitecpp boost-program-options
+# vcpkg install sqlite3 boost-program-options
 # pass -DCMAKE_TOOLCHAIN_FILE=<vcpkg>/scripts/buildsystems/vcpkg.cmake
 ```
 
