@@ -1,7 +1,7 @@
 #pragma once
 #include <SQLiteCpp/Database.h>
 
-#include <json.hpp>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
 

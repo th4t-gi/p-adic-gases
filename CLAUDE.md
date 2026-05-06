@@ -12,14 +12,25 @@ Computational research code for the *p-adic Gas Canonical Partition Calculator* 
 
 ## Build & run
 
-C++ side (Makefile, requires homebrew `sqlite3`, `SQLiteCpp`, `boost`, `fmt`, `spdlog`, plus `nlohmann/json`):
+C++ side (CMake ≥ 3.20). `fmt`, `spdlog`, and `nlohmann_json` are fetched automatically if not found. `sqlite3`, `SQLiteCpp`, and `boost` must be installed manually:
 
 ```sh
-make            # build all execs into build/  (main, translate, partitions)
-make DEBUG=1    # adds -g -O0 and builds build/test
-make fresh      # clean + all
-make test       # build & run build/test
-make clean
+# macOS (Homebrew — prefix detected automatically)
+brew install sqlite3 sqlitecpp boost
+
+# Linux (apt)
+sudo apt install libsqlite3-dev libsqlitecpp-dev libboost-program-options-dev
+
+# Windows — install vcpkg, then:
+# vcpkg install sqlite3 sqlitecpp boost-program-options
+# pass -DCMAKE_TOOLCHAIN_FILE=<vcpkg>/scripts/buildsystems/vcpkg.cmake
+```
+
+```sh
+cmake -B build                          # configure (Release)
+cmake -B build -DCMAKE_BUILD_TYPE=Debug # configure (Debug, also builds test)
+cmake --build build                     # compile into build/
+rm -rf build                            # clean
 ```
 
 Run the tree generator (note `main.cpp` is the primary executable, but the legacy script `profile.sh` calls `build/phylogenees`):

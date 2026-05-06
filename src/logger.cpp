@@ -1,4 +1,5 @@
 #include "logger.h"
+#include "git_info.h"
 
 namespace logger {
 
