@@ -1,3 +1,4 @@
+import math
 import traceback
 
 from PySide6.QtCore import Qt
@@ -17,7 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from app import APP_NAME, APP_TITLE, APP_SUBTITLE
-from app.computations.physics import beta_critical, beta_value_count
+from app.computations.physics import beta_critical
 from app.computations.utils import parse_int_list, phylogenetic_tree_count
 from app.plots import PLOT_SPECS, PlotKind, RunConfig
 from app.windows.run_window import RunWindow
@@ -56,6 +57,14 @@ class LaunchWindow(QMainWindow):
         self.step_input.setValue(0.001)
 
         self.beta_c_label = QLabel()
+
+        self.beta_c_spin = QDoubleSpinBox()
+        self.beta_c_spin.setDecimals(4)
+        self.beta_c_spin.setRange(0.0001, 10000.0)
+        self.beta_c_spin.setValue(1.0)
+        self.beta_c_spin.valueChanged.connect(self._update_feedback_labels)
+        self.beta_c_spin.setVisible(False)
+
         self.beta_count_label = QLabel()
         self.computations_label = QLabel()
         self.error_label = QLabel()
@@ -63,13 +72,15 @@ class LaunchWindow(QMainWindow):
         self.error_label.setWordWrap(True)
         self.error_label.setVisible(False)
 
-        form = QFormLayout()
-        form.addRow("Charges:", self.charges_input)
-        form.addRow("Primes:", self.primes_input)
-        form.addRow("β resolution:", self.step_input)
-        form.addRow("β_c:", self.beta_c_label)
-        form.addRow("# of β values:", self.beta_count_label)
-        form.addRow("Total Computations:", self.computations_label)
+        self._form = QFormLayout()
+        self._form.addRow("Charges:", self.charges_input)
+        self._form.addRow("Primes:", self.primes_input)
+        self._form.addRow("β resolution:", self.step_input)
+        self._form.addRow("β_c:", self.beta_c_label)
+        self._form.addRow("β_c (manual):", self.beta_c_spin)
+        self._form.addRow("# of β values:", self.beta_count_label)
+        self._form.addRow("Total Computations:", self.computations_label)
+        form = self._form
 
         plots_group = QVBoxLayout()
         plots_group.setContentsMargins(16, 0, 16, 0)
@@ -119,6 +130,14 @@ class LaunchWindow(QMainWindow):
 
         self.adjustSize()
 
+    def _has_attracting_charges(self, charges: list[int]) -> bool:
+        return max(charges) * min(charges) < 0
+
+    def _effective_beta_c(self, charges: list[int]) -> float:
+        if self._has_attracting_charges(charges):
+            return beta_critical(charges)
+        return self.beta_c_spin.value()
+
     def _update_feedback_labels(self) -> None:
         try:
             charges = parse_int_list(self.charges_input.text())
@@ -129,13 +148,18 @@ class LaunchWindow(QMainWindow):
                 self.computations_label.clear()
                 return
 
+            attracting = self._has_attracting_charges(charges)
+            self._form.setRowVisible(self.beta_c_label, attracting)
+            self._form.setRowVisible(self.beta_c_spin, not attracting)
+
+            bc = self._effective_beta_c(charges)
             step = self.step_input.value()
-            bc = beta_critical(charges)
-            count = beta_value_count(charges, step)
+            count = max(0, max(0, math.ceil((bc + step) / step)) - 1)
             tree_count = phylogenetic_tree_count(len(charges))
             total = count * len(primes) * tree_count
 
-            self.beta_c_label.setText(f"{bc:g}")
+            if attracting:
+                self.beta_c_label.setText(f"{bc:g}")
             self.beta_count_label.setText(f"{count}")
             self.computations_label.setText(f"{total:,}")
         except ValueError:
@@ -203,9 +227,15 @@ class LaunchWindow(QMainWindow):
         try:
             run_window = RunWindow(config)
         except Exception:
-            QMessageBox.critical(self, "Failed to open run", traceback.format_exc())
+            msg = QMessageBox(QMessageBox.Icon.Warning,
+                              "Failed to open run",
+                              "An error occured.",
+                              parent=self,
+                              detailedText=traceback.format_exc())
+            msg.exec()
             return
         run_window.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
-        run_window.destroyed.connect(lambda: self._open_runs.remove(run_window))
+        run_window.destroyed.connect(
+            lambda: self._open_runs.remove(run_window))
         self._open_runs.append(run_window)
         run_window.show()

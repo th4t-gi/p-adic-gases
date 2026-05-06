@@ -10,8 +10,9 @@ import matplotlib.pyplot as plt
 import matplotlib.widgets as mwidgets
 from matplotlib.animation import FuncAnimation
 
-def compute(charges: List[int], primes: List[int], beta_vals, trees: pd.DataFrame):
+def compute(charges: List[int], primes: List[int], beta_vals, trees: pd.DataFrame, next_charge: int):
     energies = interaction_energy(charges)
+    next_energies = interaction_energy(charges + [next_charge])
     df_arr = []
 
     # Computes Z_I(\beta), Expected value, Variance, and P_tree(p, \beta) for all betas
@@ -28,6 +29,8 @@ def compute(charges: List[int], primes: List[int], beta_vals, trees: pd.DataFram
                 row["branches"], p, energies, beta), axis=1)
             double_weights = trees.apply(lambda row: double_weight(
                 row["branches"], p, energies, beta), axis=1)
+            alteration = trees.apply(lambda row: alteration(
+                len(charges), row["branches"], row["degrees"], p, next_energies, beta), axis=1)
 
             df_beta = pd.DataFrame({
                 'prime': p,
@@ -37,6 +40,7 @@ def compute(charges: List[int], primes: List[int], beta_vals, trees: pd.DataFram
                 'phys_prob': probs,
                 'weight': weights,
                 'double_weight': double_weights,
+                'alteration': alteration
             })
 
             df_arr.append(df_beta)
@@ -123,6 +127,8 @@ def variance_plt(df: pd.DataFrame, set_charges, beta_step):
 
     return Vfig
 
+
+
 ###############################################################
 
 plt.rcParams.update({
@@ -131,22 +137,24 @@ plt.rcParams.update({
 })
 
 # primes to compute for
-primes = [2, 3, 5, 7, 11]
+primes = [2,3,5,7,11]
 # charges_arr = [[1, 1, -1, -1], [5, 2, 1, -3], [-1, -2, -2, -3]]
 # beta_step_arr = [0.02, 0.0003, 0.05]
-charges_arr = [[2,-2,1,-1,1]]
-beta_step_arr = [0.01]
+charges_str = input("charges (comma seperated): ")
+charges_arr = [[int(q) for q in charges_str.split(',')]]
+next_charge = int(input("N+1 charge: "))
+beta_step_arr = [0.001]
 num_plots = len(charges_arr)
 # num_plots = 1
 
 prob_figs: List[TreePlt] = []
 # Zfig, Zaxs = plt.subplots(figsize=(5,8), nrows=num_plots)
-Zfig, Zaxs = plt.subplots(figsize=(6, 2.5), nrows=num_plots)
+# Zfig, Zaxs = plt.subplots(figsize=(6,3), nrows=num_plots)
 # Zfig = canonical_partition_plt(df)
 # Efig = expected_val_plt(df)
 # Vfig = variance_plt(df)
-if num_plots == 1:
-    Zaxs = [Zaxs]
+# if num_plots == 1:
+#     Zaxs = [Zaxs]
 
 print(enumerate(zip(beta_step_arr, charges_arr)))
 for i, (step, charges) in enumerate(zip(beta_step_arr, charges_arr)):
@@ -165,11 +173,11 @@ for i, (step, charges) in enumerate(zip(beta_step_arr, charges_arr)):
     # excludes endpoints
     beta_vals = beta_vals[1:]
 
-    trees = query(n, primes, "..")
+    trees = query(n, '../trees.db')
     trees["branches"] = trees["branches"].apply(ast.literal_eval)
     trees["degrees"] = trees["degrees"].apply(ast.literal_eval)
 
-    df = compute(charges, primes, beta_vals, trees)
+    df = compute(charges, primes, beta_vals, trees, next_charge)
 
     tree_ids = df.index.get_level_values('tree_id').unique()
     df.index = df.index.set_levels([range(1,len(tree_ids)+1) if name == 'tree_id' else df.index.levels[i]
@@ -184,73 +192,74 @@ for i, (step, charges) in enumerate(zip(beta_step_arr, charges_arr)):
 
     print(f"charges {charges} have sig_minus {sig_minus}")
 
-    # ------------ Plotting ------------
-    ax = Zaxs[i]
-    canonical_partition_plt(df, Zfig, ax)
+    # # ------------ Plotting ------------
+    # ax = Zaxs[i]
+    # canonical_partition_plt(df, Zfig, ax)
 
-    ax.set_title(
-        r"$\mathcal{Z}_4(\beta)$ for $(\mathfrak{q}_1, \mathfrak{q}_2, \mathfrak{q}_3, \mathfrak{q}_4)=(" +
-        ', '.join(map(str, charges)) +
-        r")$",
-        fontsize=14,
-        pad=10
-    )
-    # if i == 0: 
-    #     ax.legend(title="Prime p")
-    #     patches, labels = ax.get_legend_handles_labels()
-    #     # Get rid of the legend on the first plot, so it is only drawn on the separate figure
-    #     ax.get_legend().remove()
-    #     figlegend.legend(patches, labels, title="Prime p")
-    #     figlegend.savefig('legend.png', dpi=300)
+    # # ax.set_title(
+    # #     r"$\mathcal{Z}_4(\beta)$ for $\mathfrak{q}=(" +
+    # #     ', '.join(map(str, charges)) +
+    # #     r")$",
+    # #     fontsize=14,
+    # #     pad=10
+    # # )
+    # # if i == 0: 
+    # ax.legend(title="Prime p")
+    # # patches, labels = ax.get_legend_handles_labels()
+    # # Get rid of the legend on the first plot, so it is only drawn on the separate figure
+    # # ax.get_legend().remove()
+    # # figlegend.legend(patches, labels, title="Prime p")
+    # # figlegend.savefig('legend.png', dpi=300)
 
-    if q_min < 0 and q_max > 0:
-        ax.set_yscale("log")
+    # if q_min < 0 and q_max > 0:
+    #     ax.set_yscale("log")
 
-        ax.axvline(
-            x=sig_minus,
-            linestyle="--",
-            color="black",
-            label=r"$\beta_c$"
-        )
+    #     ax.axvline(
+    #         x=sig_minus,
+    #         linestyle="--",
+    #         color="black",
+    #         label=r"$\beta_c$"
+    #     )
 
-        # ax.set_xticklabels(current_labels)
-        ax.annotate(
-            r"\boldmath$\beta_c$",
-            xy=(sig_minus, 0.3),
-            xycoords=('data', 'axes fraction'),
-            # xytext=(0),
-            # textcoords='offset points',
-            ha='center',
-            va='top',
-            fontsize=12,
-            bbox=dict(
-                # boxstyle="pad=0.3",
-                facecolor="white",
-                edgecolor="white"
-            )
-            # arrowprops=dict(arrowstyle='-', color='black')  # optional arrow
-        )
-    else:
-        pass
+    #     # ax.set_xticklabels(current_labels)
+    #     ax.annotate(
+    #         r"\boldmath$\beta_c$",
+    #         xy=(sig_minus, 0.3),
+    #         xycoords=('data', 'axes fraction'),
+    #         # xytext=(0),
+    #         # textcoords='offset points',
+    #         ha='center',
+    #         va='top',
+    #         fontsize=12,
+    #         bbox=dict(
+    #             # boxstyle="pad=0.3",
+    #             facecolor="white",
+    #             edgecolor="white"
+    #         )
+    #         # arrowprops=dict(arrowstyle='-', color='black')  # optional arrow
+    #     )
+    # else:
+    #     pass
 
-    Zfig.canvas.manager.set_window_title(f"Z_I_beta_q{charges}")
-    Zfig.supxlabel(r'\boldmath$\beta$', fontsize=10)
-    width, height = Zfig.get_size_inches()
-    print(0.96, height)
-    Zfig.subplots_adjust(left=0.08, bottom=0.15, right=0.97, top=0.95, hspace=0.1)
+    # Zfig.canvas.manager.set_window_title(f"Z_I_beta_q{charges}")
+    # Zfig.supxlabel(r'\boldmath$\beta$', fontsize=10)
+    # Zfig.supylabel(r'$\mathcal{Z}_4(\beta)$', fontsize=10,rotation=0)
+    # width, height = Zfig.get_size_inches()
+    # print(0.96, height)
+    # Zfig.subplots_adjust(left=0.11, bottom=0.1, right=0.97, top=0.95, hspace=0.1)
 
 
 
-path = f"../../poster/{Zfig.canvas.manager.get_window_title()}.png"
-Zfig.savefig(path, dpi=300)
+# path = f"./{Zfig.canvas.manager.get_window_title()}.png"
+# Zfig.savefig(path, dpi=300)
 # prob_plt.fig.savefig("prob1.png", bbox_inches='tight', dpi=300)
 
 plt.show()
 
 for prob in prob_figs:
      # Save animation after showing interactive plot
-    save = input(f"Do you want to save \"{prob}\"? (y/n) ")
     # save = "n"
+    save = input(f"Do you want to save \"{prob}\"? (y/n) ")
     if (save.lower() == "y"):
-        prob.save_beta_animation(total_time=10)
+        prob.save_beta_animation(total_time=20)
 

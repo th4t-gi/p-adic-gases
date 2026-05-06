@@ -8,7 +8,6 @@ script layout.
 from __future__ import annotations
 
 import math
-from typing import List
 
 import numpy as np
 
@@ -51,7 +50,7 @@ def factor(branch: int, degree: int, p: int, e_J: float, beta: float) -> float:
     denom = p ** (size_J + (e_J * beta)) - p
     return falling_factorial(p, degree) / denom
 
-def q_term(branches: List[int], p: int, energies: np.ndarray, beta: float) -> float:
+def q_term(branches: list[int], p: int, energies: np.ndarray, beta: float) -> float:
     out = 1.0
     for J in branches:
         size_J = J.bit_count()
@@ -59,13 +58,13 @@ def q_term(branches: List[int], p: int, energies: np.ndarray, beta: float) -> fl
         out *= (1/denom)
     return out
 
-def c_term(degrees: List[int], p: int) -> float:
+def c_term(degrees: list[int], p: int) -> float:
     out = 1.0
     for degree in degrees:
         out *= falling_factorial(p, degree)
     return out
 
-def weight(branches: List[int], p: int, energies: np.ndarray, beta: float) -> float:
+def weight(branches: list[int], p: int, energies: np.ndarray, beta: float) -> float:
     total = 0.0
     for J in branches:
         size_J = J.bit_count()
@@ -74,7 +73,7 @@ def weight(branches: List[int], p: int, energies: np.ndarray, beta: float) -> fl
     return total
 
 
-def double_weight(branches: List[int], p: int, energies: np.ndarray, beta: float) -> float:
+def double_weight(branches: list[int], p: int, energies: np.ndarray, beta: float) -> float:
     total = 0.0
     for J in branches:
         size_J = J.bit_count()
@@ -84,13 +83,13 @@ def double_weight(branches: List[int], p: int, energies: np.ndarray, beta: float
     return total
 
 
-def term(branches: List[int], degrees: List[int], p: int, energies: np.ndarray, beta: float) -> float:
+def term(branches: list[int], degrees: list[int], p: int, energies: np.ndarray, beta: float) -> float:
     out = 1.0
     for J, degree in zip(branches, degrees):
         out *= factor(J, degree, p, energies[J], beta)
     return out
 
-def term_alt(branches: List[int], degrees: List[int], p: int, energies: np.ndarray, beta: float) -> float:
+def term_alt(branches: list[int], degrees: list[int], p: int, energies: np.ndarray, beta: float) -> float:
     return c_term(degrees, p) * q_term(branches, p, energies, beta)
 
 
@@ -107,3 +106,51 @@ def interaction_energy(charges: list[int]) -> np.ndarray:
                 sum2 += q * q
         out[J] = (sum1 * sum1 - sum2) / 2.0
     return out
+
+
+def alteration(N: int, branches: list[int], degrees: list[int], p: int, energies: list[float], beta: float):
+    # add leaves to branches array
+    verticies = branches
+    for i in range(N):
+        verticies.append(1 << i)
+        degrees.append(0)
+    # print(verticies, degrees)
+
+    def contrib(p: int, size: int, energy: float, beta: float):
+        return ((p ** (size + energy*beta)) - p)
+
+    def ramify(vertex):
+        N_plus_1 = 1 << (N)
+        new_vertex = vertex + N_plus_1
+        size_new_vertex = new_vertex.bit_count()
+        return (p*(p-1))/contrib(p, size_new_vertex, energies[new_vertex], beta)
+        
+
+    def branchify(vertex, children):
+        size_vertex = vertex.bit_count()            # |v|
+        N_plus_1 = 1 << (N)                         # \{N\}
+        new_vertex = vertex + N_plus_1              # v \cup \{N\}
+        size_new_vertex = new_vertex.bit_count()    # |v \cup \{N\}|
+        if (p < children):
+            return 0
+        
+        return ((p - children)*contrib(p, size_vertex, energies[vertex], beta))/contrib(p, size_new_vertex, energies[new_vertex], beta)
+
+    def alter(vertex):
+        size_vertex = vertex.bit_count()
+        numerator = 1.0
+        denominator = 1.0
+        for J in branches:
+            # if v \subsetneq J
+            if (vertex & J) == vertex:
+                numerator *= contrib(p, size_vertex, energies[vertex], beta)
+                denominator *= contrib(p, size_vertex + 1, energies[vertex], beta)
+        
+        return numerator/denominator
+
+    total = 0
+
+    for (v, c) in zip(verticies, degrees):
+        total += (ramify(v) + branchify(v, c))*alter(v)
+
+    return total

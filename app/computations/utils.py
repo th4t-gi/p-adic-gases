@@ -35,7 +35,7 @@ def falling_factorial(x: float, n: int) -> float:
 
 def default_db_path() -> Path:
     """`<repo-root>/data/trees.db` derived from this file's location."""
-    return Path(__file__).resolve().parents[2] / "data" / "trees.db"
+    return Path(__file__).resolve().parents[2] / "data" / "test.db"
 
 
 def tree_image_path(n: int, tree_id: int) -> Path:
@@ -46,9 +46,15 @@ def tree_image_path(n: int, tree_id: int) -> Path:
 def load_trees(n: int, db_path: Path | None = None) -> pd.DataFrame:
     """Load `treesN` from the SQLite DB, with branches/degrees parsed from JSON."""
     path = db_path or default_db_path()
+    if not path.exists():
+        return pd.DataFrame()
     con = sqlite3.connect(str(path))
     try:
         df = pd.read_sql_query(f"SELECT rowid, * FROM trees{n}", con).set_index(["rowid"]).rename_axis(["tree_id"])
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        return pd.DataFrame()
     finally:
         con.close()
     df["branches"] = df["branches"].apply(ast.literal_eval)

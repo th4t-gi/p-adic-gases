@@ -2,7 +2,7 @@
 
 namespace logger {
 
-static std::string logDir = "logs";
+static std::string logDir = "out/logs";
 static std::string console_pattern = "[%T.%e] [%^%l%$] [%!] %v";
 static std::string file_pattern = "[%b %d %T.%e] [%l] [%!] %v";
 

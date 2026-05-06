@@ -10,4 +10,5 @@ class QuotientPerTreePlot(PerTreePlot):
     _y_label = r"$Q_\pitchfork(\beta)$"
     _title_prefix = "Quotient per Tree"
     _default_auto_scale = True
-    _supports_log_y = True
+    _default_log_y = False
+    _default_p_trees_only = True

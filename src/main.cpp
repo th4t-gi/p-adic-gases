@@ -36,6 +36,7 @@ int main(int argc, char** argv) {
         ("export", po::value<std::string>(&export_file), "Exported database")
         ("database,d", po::value<std::string>(&db_file), "database file")
         ("ignore-changes", "Do not ask what the changes/goal of this run is")
+        ("confirm", "Skips confirm message")
         ("verbose,v", "Do verbose or not");
 
   po::positional_options_description p;
@@ -123,8 +124,12 @@ int main(int argc, char** argv) {
   // }
 
   // SPDLOG_INFO("cached trees successfully ({:.4f}s)", sw);
-
-  char ready = question("ready to run calculation? (y/n) ", 'y');
+  char ready;
+  if (vm.count("confirm")) {
+    ready = 'y';
+  } else {
+    ready = question("ready to run calculation? (y/n) ", 'y');
+  }
 
   if (ready == 'n') {
     SPDLOG_INFO("cancelling calculation");

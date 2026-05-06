@@ -10,4 +10,4 @@ class ProbabilityPerTreePlot(PerTreePlot):
     _y_label = "Probability"
     _title_prefix = "Physical Probability per Tree"
     _fixed_ylim = (0.0, 1.0)
-    _default_auto_scale = False
+    _default_auto_scale = True

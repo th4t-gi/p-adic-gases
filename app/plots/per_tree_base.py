@@ -2,12 +2,13 @@
 
 Subclasses configure behaviour via class attributes:
 
-    _value_column     — DataFrame column to plot (e.g. "phys_prob")
-    _y_label          — y-axis label string
-    _title_prefix     — prefix for the plot title
-    _fixed_ylim       — (lo, hi) applied when auto-scale is off; None = skip
-    _default_auto_scale — initial state of the auto-scale checkbox
-    _supports_log_y   — whether to show a "Log y" checkbox
+    _value_column         — DataFrame column to plot (e.g. "phys_prob")
+    _y_label              — y-axis label string
+    _title_prefix         — prefix for the plot title
+    _fixed_ylim           — (lo, hi) applied when auto-scale is off; None = skip
+    _default_auto_scale   — initial state of the auto-scale checkbox
+    _default_log_y        — initial state of the log-y checkbox
+    _default_p_trees_only — initial state of the p-trees-only checkbox
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import matplotlib.image as mpimg
+import mplcursors
 import numpy as np
 import pandas as pd
 from matplotlib.axes import Axes
@@ -38,6 +40,7 @@ from app.plots.base import BasePlot
 _DEFAULT_SORT = "Tree ID"
 _AVERAGE_SORT = "Average over selected primes"
 _PRIME_PREFIX = "p = "
+_FILTER_ALL = "All"
 
 
 class PerTreePlot(BasePlot):
@@ -46,8 +49,9 @@ class PerTreePlot(BasePlot):
     _y_label: str = "Value"
     _title_prefix: str = "Value per Tree"
     _fixed_ylim: tuple[float, float] | None = None
-    _default_auto_scale: bool = False
-    _supports_log_y: bool = False
+    _default_auto_scale: bool = True
+    _default_log_y: bool = False
+    _default_p_trees_only: bool = False
     _has_beta_slider: bool = True
 
     supports_video = True
@@ -81,13 +85,21 @@ class PerTreePlot(BasePlot):
             self._stub("No β values to plot")
             return
 
+        self.fig.set_layout_engine(None)
         self._beta_idx = 0
-        self._limit_enabled = False
         self._auto_scale = self._default_auto_scale
-        self._log_y = False
+        self._log_y = self._default_log_y
+        self._p_trees_only = self._default_p_trees_only
+        self._show_tree_images = False
         self._sort_key = _DEFAULT_SORT
+        self._filter_p = _FILTER_ALL
         n_total = len(self._all_tree_ids())
-        self._n_limit = min(20, n_total)
+        if self.computation.n >= 5:
+            self._limit_enabled = True
+            self._n_limit = min(200, n_total)
+        else:
+            self._limit_enabled = False
+            self._n_limit = min(20, n_total)
 
         self._ax = self.fig.add_subplot(111)
         self._draw_for_state()
@@ -113,22 +125,27 @@ class PerTreePlot(BasePlot):
 
     # ---- widget construction ---------------------------------------------
 
-    def _build_controls_row(self) -> QHBoxLayout:
-        row = QHBoxLayout()
+    def _build_controls_row(self) -> QVBoxLayout:
+        outer = QVBoxLayout()
+        outer.setSpacing(4)
+
+        # ---- row 1: data controls ----------------------------------------
+        top = QHBoxLayout()
+        top.addStretch(1)
 
         self._limit_check = QCheckBox("Limit trees:")
         self._limit_check.setChecked(self._limit_enabled)
         self._limit_check.toggled.connect(self._on_limit_toggled)
-        row.addWidget(self._limit_check)
+        top.addWidget(self._limit_check)
 
         self._limit_spin = QSpinBox()
         self._limit_spin.setRange(1, max(len(self._all_tree_ids()), 1))
         self._limit_spin.setValue(self._n_limit)
         self._limit_spin.valueChanged.connect(self._on_n_changed)
-        row.addWidget(self._limit_spin)
+        top.addWidget(self._limit_spin)
 
-        row.addSpacing(16)
-        row.addWidget(QLabel("Sort by:"))
+        top.addSpacing(16)
+        top.addWidget(QLabel("Sort by:"))
 
         self._sort_combo = QComboBox()
         self._sort_combo.addItem(_DEFAULT_SORT)
@@ -140,24 +157,73 @@ class PerTreePlot(BasePlot):
         if idx >= 0:
             self._sort_combo.setCurrentIndex(idx)
         self._sort_combo.currentTextChanged.connect(self._on_sort_changed)
-        row.addWidget(self._sort_combo)
+        top.addWidget(self._sort_combo)
 
-        row.addSpacing(16)
+        if len(self.config.primes) > 1:
+            top.addSpacing(16)
+            top.addWidget(QLabel("Filter by p:"))
+            self._filter_p_combo = QComboBox()
+            self._filter_p_combo.addItem(_FILTER_ALL)
+            for p in self.config.primes:
+                self._filter_p_combo.addItem(f"{_PRIME_PREFIX}{p}")
+            idx = self._filter_p_combo.findText(self._filter_p)
+            if idx >= 0:
+                self._filter_p_combo.setCurrentIndex(idx)
+            self._filter_p_combo.currentTextChanged.connect(self._on_filter_p_changed)
+            top.addWidget(self._filter_p_combo)
+
+        top.addStretch(1)
+        outer.addLayout(top)
+
+        # ---- row 2: view toggles -----------------------------------------
+        bottom = QHBoxLayout()
+        bottom.addStretch(1)
 
         self._auto_scale_check = QCheckBox("Auto-scale")
         self._auto_scale_check.setChecked(self._auto_scale)
         self._auto_scale_check.toggled.connect(self._on_auto_scale_toggled)
-        row.addWidget(self._auto_scale_check)
+        bottom.addWidget(self._auto_scale_check)
 
-        if self._supports_log_y:
-            row.addSpacing(16)
-            self._log_check = QCheckBox("Log y")
-            self._log_check.setChecked(self._log_y)
-            self._log_check.toggled.connect(self._on_log_toggled)
-            row.addWidget(self._log_check)
+        bottom.addSpacing(16)
+        self._log_check = QCheckBox("Log y")
+        self._log_check.setChecked(self._log_y)
+        self._log_check.toggled.connect(self._on_log_toggled)
+        bottom.addWidget(self._log_check)
 
-        row.addStretch(1)
-        return row
+        bottom.addSpacing(16)
+        self._p_trees_check = QCheckBox("p-trees only")
+        self._p_trees_check.setChecked(self._p_trees_only)
+        self._p_trees_check.toggled.connect(self._on_p_trees_toggled)
+        bottom.addWidget(self._p_trees_check)
+
+        bottom.addSpacing(16)
+        self._show_images_check = QCheckBox("Tree images")
+        self._show_images_check.setChecked(self._show_tree_images)
+        self._show_images_check.toggled.connect(self._on_show_images_toggled)
+        bottom.addWidget(self._show_images_check)
+
+        self._extra_controls(bottom)
+        bottom.addStretch(1)
+        outer.addLayout(bottom)
+
+        return outer
+
+    def _extra_controls(self, row: QHBoxLayout) -> None:
+        """Hook for subclasses to append controls before the trailing stretch."""
+
+    def _filter_pivot(self, pivot):
+        if not self._p_trees_only:
+            return pivot
+        trees_df = self.computation._trees_df
+        if self._filter_p != _FILTER_ALL and self._filter_p.startswith(_PRIME_PREFIX):
+            try:
+                p = int(self._filter_p[len(_PRIME_PREFIX):])
+            except ValueError:
+                p = max(self.config.primes)
+        else:
+            p = max(self.config.primes)
+        is_p_tree = trees_df[f"is_{p}_tree"].reindex(pivot.index).fillna(False)
+        return pivot[is_p_tree]
 
     def _build_slider_row(self) -> QHBoxLayout:
         beta_vals = self.computation.beta_vals
@@ -191,12 +257,47 @@ class PerTreePlot(BasePlot):
         self._sort_key = text
         self._redraw()
 
+    def _on_filter_p_changed(self, text: str) -> None:
+        self._filter_p = text
+        self._update_sort_combo()
+        self._redraw()
+
+    def _update_sort_combo(self) -> None:
+        if not hasattr(self, "_sort_combo"):
+            return
+        current = self._sort_combo.currentText()
+        self._sort_combo.blockSignals(True)
+        self._sort_combo.clear()
+        self._sort_combo.addItem(_DEFAULT_SORT)
+        if self._filter_p == _FILTER_ALL:
+            for p in self.config.primes:
+                self._sort_combo.addItem(f"{_PRIME_PREFIX}{p}")
+            if len(self.config.primes) > 1:
+                self._sort_combo.addItem(_AVERAGE_SORT)
+        else:
+            self._sort_combo.addItem(self._filter_p)
+        idx = self._sort_combo.findText(current)
+        if idx >= 0:
+            self._sort_combo.setCurrentIndex(idx)
+        else:
+            self._sort_combo.setCurrentIndex(0)
+            self._sort_key = _DEFAULT_SORT
+        self._sort_combo.blockSignals(False)
+
     def _on_auto_scale_toggled(self, checked: bool) -> None:
         self._auto_scale = checked
         self._redraw()
 
     def _on_log_toggled(self, checked: bool) -> None:
         self._log_y = checked
+        self._redraw()
+
+    def _on_p_trees_toggled(self, checked: bool) -> None:
+        self._p_trees_only = checked
+        self._redraw()
+
+    def _on_show_images_toggled(self, checked: bool) -> None:
+        self._show_tree_images = checked
         self._redraw()
 
     def _on_beta_changed(self, idx: int) -> None:
@@ -215,6 +316,9 @@ class PerTreePlot(BasePlot):
     # ---- drawing ---------------------------------------------------------
 
     def _redraw(self) -> None:
+        if hasattr(self, "_hover_cursor"):
+            self._hover_cursor.remove()
+            del self._hover_cursor
         self._ax.clear()
         self._draw_for_state()
         if hasattr(self, "_canvas"):
@@ -224,6 +328,14 @@ class PerTreePlot(BasePlot):
         beta = float(self.computation.beta_vals[self._beta_idx if self._has_beta_slider else 0])
         df_beta = self.df.xs(beta, level="beta")
         pivot = df_beta[self._value_column].unstack(level="prime")[self.config.primes]
+        if self._filter_p != _FILTER_ALL and self._filter_p.startswith(_PRIME_PREFIX):
+            try:
+                p = int(self._filter_p[len(_PRIME_PREFIX):])
+            except ValueError:
+                p = None
+            if p in pivot.columns:
+                pivot = pivot[[p]]
+        pivot = self._filter_pivot(pivot)
 
         sort_col = self._sort_column(pivot, self._sort_key)
         if sort_col is not None:
@@ -255,6 +367,41 @@ class PerTreePlot(BasePlot):
             stride = int(np.ceil(len(tree_ids) / max_image_ticks))
             kept = list(range(0, len(tree_ids), stride))
         self._draw_tree_image_ticks(ax, tree_ids, kept)
+        self._attach_hover_tooltip(ax, tree_ids)
+
+    def _attach_hover_tooltip(self, ax: Axes, tree_ids: list[int]) -> None:
+        bar_containers = [c for c in ax.containers if hasattr(c, "patches")]
+        if not bar_containers:
+            return
+
+        self._hover_cursor = mplcursors.cursor(bar_containers, hover=mplcursors.HoverMode.Transient)
+        n = self.computation.n
+
+        @self._hover_cursor.connect("add")
+        def _on_add(sel) -> None:
+            bar_idx = sel.index
+            if not (0 <= bar_idx < len(tree_ids)):
+                return
+            tid = tree_ids[bar_idx]
+            sel.annotation.set_text(f"")
+            sel.annotation.arrow_patch.set_visible(False)
+            path = tree_image_path(n, tid)
+            if not path.exists():
+                sel.annotation.set_text(f"Tree {tid}")
+                sel.annotation.arrow_patch.set_visible(True)
+                return
+            img = mpimg.imread(str(path))
+            ab = AnnotationBbox(
+                OffsetImage(img, zoom=0.15),
+                sel.target,
+                xybox=(0, 30),
+                xycoords="data",
+                boxcoords="offset points",
+                frameon=True,
+                pad=0.1,
+            )
+            ax.add_artist(ab)
+            sel.extras.append(ab)
 
     def _sort_column(self, pivot: pd.DataFrame, key: str) -> pd.Series | None:
         if key == _DEFAULT_SORT:
@@ -274,11 +421,18 @@ class PerTreePlot(BasePlot):
         return list(self.df.index.get_level_values("tree_id").unique())
 
     def _draw_tree_image_ticks(self, ax: Axes, tree_ids: list[int], kept: list[int]) -> None:
+        ax.set_xticks(kept)
+        ax.set_xlabel("")
+
+        if not self._show_tree_images:
+            ax.set_xticklabels([str(tree_ids[x]) for x in kept])
+            self.fig.subplots_adjust(left=self._LEFT_MARGIN, right=self._RIGHT_MARGIN, top=self._TOP_MARGIN, bottom=0.12)
+            return
+
         n = self.computation.n
-        zoom = self._tick_image_zoom(len(kept))
+        zoom = self._tick_image_zoom()
 
         text_labels: dict[int, str] = {}
-        ax.set_xticks(kept)
         ax.set_xticklabels(["" for _ in kept])
 
         for x in kept:
@@ -303,18 +457,22 @@ class PerTreePlot(BasePlot):
         if text_labels:
             ax.set_xticklabels([text_labels.get(x, "") for x in kept])
 
-        self.fig.subplots_adjust(bottom=self._IMAGE_MARGIN_FRAC + 0.04)
-        ax.set_xlabel("")
+        self.fig.subplots_adjust(
+            left=self._LEFT_MARGIN,
+            right=self._RIGHT_MARGIN,
+            top=self._TOP_MARGIN,
+            bottom=self._IMAGE_MARGIN_FRAC + 0.04,
+        )
 
-    _IMAGE_WIDTH_FRAC = 0.70
-    _IMAGE_MAX_HEIGHT_FRAC = 0.05
-    _IMAGE_MARGIN_FRAC = _IMAGE_MAX_HEIGHT_FRAC + 0.02
+    _IMAGE_WIDTH_FRAC = 0.03
+    _IMAGE_MARGIN_FRAC = 0.05
     _NATIVE_IMAGE_WIDTH_PX = 400
-    _NATIVE_IMAGE_HEIGHT_PX = 370
+    # Fixed plot-area margins so toggling auto-scale (y-tick label width changes)
+    # doesn't reshape the bar area horizontally.
+    _LEFT_MARGIN = 0.12
+    _RIGHT_MARGIN = 0.95
+    _TOP_MARGIN = 0.92
 
-    def _tick_image_zoom(self, n_kept: int) -> float:
-        n_kept = max(n_kept, 1)
-        fig_w_px, fig_h_px = [s * self.fig.dpi for s in self.fig.get_size_inches()]
-        zoom_by_width = (fig_w_px * self._IMAGE_WIDTH_FRAC / n_kept) / self._NATIVE_IMAGE_WIDTH_PX
-        zoom_by_height = (fig_h_px * self._IMAGE_MAX_HEIGHT_FRAC) / self._NATIVE_IMAGE_HEIGHT_PX
-        return min(zoom_by_width, zoom_by_height)
+    def _tick_image_zoom(self) -> float:
+        fig_w_px = self.fig.get_size_inches()[0] * self.fig.dpi
+        return (fig_w_px * self._IMAGE_WIDTH_FRAC) / self._NATIVE_IMAGE_WIDTH_PX

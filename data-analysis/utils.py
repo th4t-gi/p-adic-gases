@@ -25,7 +25,6 @@ def weight(branches: List[int], p: int, energies: List[float], beta: float):
         total += factor
     return total
 
-
 def double_weight(branches: List[int], p: int, energies: List[float], beta: float):
     total = 0.0
     for J in branches:
@@ -36,6 +35,54 @@ def double_weight(branches: List[int], p: int, energies: List[float], beta: floa
         factor = power*((e_J/(1-power))**2)
         total += factor
     return total
+
+
+def alteration(N: int, branches: List[int], degrees: List[int], p: int, energies: List[float], beta: float):
+    # add leaves to branches array
+    verticies = branches
+    for i in range(N):
+        verticies.append(1 << i)
+        degrees.append(0)
+    # print(verticies, degrees)
+
+    def ramify(vertex):
+        N_plus_1 = 1 << (N)
+        new_vertex = vertex + N_plus_1
+        size_new_vertex = new_vertex.bit_count()
+        return (p*(p-1))/contrib(p, size_new_vertex, energies[new_vertex], beta)
+        
+
+    def branchify(vertex, children):
+        size_vertex = vertex.bit_count()            # |v|
+        N_plus_1 = 1 << (N)                         # \{N\}
+        new_vertex = vertex + N_plus_1              # v \cup \{N\}
+        size_new_vertex = new_vertex.bit_count()    # |v \cup \{N\}|
+        if (p < children):
+            return 0
+        
+        return ((p - children)*contrib(p, size_vertex, energies[vertex], beta))/contrib(p, size_new_vertex, energies[new_vertex], beta)
+
+    def alter(vertex):
+        size_vertex = vertex.bit_count()
+        numerator = 1.0
+        denominator = 1.0
+        for J in branches:
+            # if v \subsetneq J
+            if (vertex & J) == vertex:
+                numerator *= contrib(p, size_vertex, energies[vertex], beta)
+                denominator *= contrib(p, size_vertex + 1, energies[vertex], beta)
+        
+        return numerator/denominator
+
+    total = 0
+
+    for (v, c) in zip(verticies, degrees):
+        total += (ramify(v) + branchify(v, c))*alter(v)
+
+    return total
+
+def contrib(p: int, size: int, energy: float, beta: float):
+    return ((p ** (size + energy*beta)) - p)
 
 def term(branches: List[int], degrees: List[int], p: int, energies: List[float],  beta: float):
     out = 1.0

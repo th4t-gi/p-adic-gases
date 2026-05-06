@@ -45,7 +45,7 @@ seven = trees(7)
 eight = trees(8)
 nine = trees(9)
 # example
-for t in tuple(sorted(four.union(five, six, seven, eight), key=str)):
+for t in tuple(sorted(six, key=str)):
     string = format_tree(t)
     leaves = string.count("1")
     print("\t"*(leaves - 4), string)

@@ -10,6 +10,5 @@ class CombinatorialPerTreePlot(PerTreePlot):
     _y_label = r"$C_\pitchfork(p)$"
     _title_prefix = "Combinatorial Term per Tree"
     _default_auto_scale = True
-    _supports_log_y = True
     _has_beta_slider = False
     supports_video = False

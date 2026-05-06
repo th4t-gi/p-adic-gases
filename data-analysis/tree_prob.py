@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 from matplotlib.animation import FuncAnimation
 from matplotlib.ticker import MaxNLocator
+import matplotlib.image as mpimg
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
 import pandas as pd
 
@@ -36,7 +38,7 @@ class TreePlt:
             self.tree_ids) else len(self.tree_ids)
         self.tree_labels = range(1, self.n_trees+1) # since range is exclusive
         
-        self.fig_size = (10, 3)
+        self.fig_size = (20, 7)
 
         # Set up probability plot with slider
         if self.subplots:
@@ -55,10 +57,11 @@ class TreePlt:
             self.fig, ax = plt.subplots(figsize=self.fig_size)
             self.ax = np.array([ax])
                 
+        plt.rcParams['font.size'] = 18  # Default is 10
         self.fig.supylabel("Probability", x=0.01)
-        self.fig.supxlabel("Tree ID", y=0.01)
+        self.fig.supxlabel("Tree", y=0.02)
 
-        self.ax_slider = self.fig.add_axes([0.15, 0.04, 0.7, 0.02])
+        self.ax_slider = self.fig.add_axes([0.15, 0.87, 0.7, 0.02])
         self.fig._slider = Slider(
             # left,bottom,width,height
             ax=self.ax_slider,
@@ -137,7 +140,26 @@ class TreePlt:
             self.ax[0].legend(title="Prime p")
 
         plt.tight_layout(w_pad=0.25)
-        plt.subplots_adjust(bottom=0.15)
+        plt.subplots_adjust(left=0.07, bottom=0.17, top=0.85)
+
+        # Replace x-axis ticks with images
+        for i, ax in enumerate(self.ax if self.subplots else [self.ax[0]]):
+            ax.set_xticks(xticks)
+            # ax.set_xticklabels([])  # Remove text labels
+            
+            # Add images at each tick position
+            for tick_pos, tree_id in zip(xticks, [t for t in self.tree_labels if t in df_p.index]):
+                try:
+                    # Load your tree image - adjust path as needed
+                    img = mpimg.imread(f"../trees_bold{self.N}/tree_{tree_id}.png")
+                    imagebox = OffsetImage(img, zoom=0.09)  # Adjust zoom as needed
+                    ab = AnnotationBbox(imagebox, (tick_pos, -0.1), 
+                                       frameon=False, 
+                                       xycoords=('data', 'axes fraction'),
+                                       boxcoords=('data', 'axes fraction'))
+                    ax.add_artist(ab)
+                except FileNotFoundError:
+                    ax.text(tick_pos, -0.15, str(tree_id), transform=ax.get_xaxis_transform(), ha='center')
 
     def update(self, val):
         beta = self.fig._slider.val

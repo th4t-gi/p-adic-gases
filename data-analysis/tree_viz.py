@@ -1,12 +1,24 @@
+from datetime import datetime
+import os
+from pathlib import Path
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))  # go up one level
+
+import matplotlib
+matplotlib.use("Agg")
+
+from matplotlib.figure import Figure
+
+from app.computations.utils import load_trees
 from utils import query
 import ast
 import networkx as nx
+import pandas as pd
 import pygraphviz as pgv
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import numpy as np
-import os
-import sys
+from concurrent.futures import ProcessPoolExecutor
 
 from random import randint
 from typing import List, Dict, Set
@@ -14,18 +26,13 @@ from numpy.testing import assert_array_equal
 from collections import Counter
 from itertools import permutations
 
+N = int(sys.argv[1]) if len(sys.argv) > 1 else 4
 
-trees = query(N, '../trees.db')
-trees["branches"] = trees["branches"].apply(ast.literal_eval)
-trees["degrees"] = trees["degrees"].apply(ast.literal_eval)
+FIG_WIDTH = 4
+FIG_HEIGHT = 4
 
-# trees.index = range(1, trees.index.size+1)
-
-# i_min = trees.index.min()
-# i_max = trees.index.max()
-# idxs = [randint(i_min, i_max) for _ in range(3)]
-# trees = trees.loc[idxs]
-# trees = trees.loc[[2338,1593, 1444]]
+TREE_IMG_DIR = os.path.join(os.path.dirname(__file__), f"../out/trees{N}/")
+TREE_DB_PATH = os.path.join(os.path.dirname(__file__), f"../data/trees.db")
 
 
 def branches_to_prufer_seq(N: int, branches: List[int]) -> List[int]:
@@ -234,186 +241,216 @@ def get_sorted_prufer(p: str):
     return "".join(str(x) for x in sorted(p))
 
 
-tree_img_dir = f"../trees{N}/"
-
-if not os.path.isdir(tree_img_dir):
-    os.mkdir(tree_img_dir)
-
-prufer_sums = []
-prufers: List[List[int]] = []
-# pretty_prufers: List[List[int]] = []
-
-for i, tree in trees.iterrows():
-    filename = f"tree_{tree.name}"
-    # filename= "temp"
-    imgpath = tree_img_dir + filename + ".png"
-    # print(imgpath)
-
-    branches = tree["branches"]
-    degrees = tree["degrees"]
+def draw_tree(branches: list[int], N: int) -> Figure:
     prufer_seq = branches_to_prufer_seq(N, branches)
-    prufer_seq = [max(prufer_seq) - i+1 for i in prufer_seq]
-    # pretty_prufer_seq = [max(prufer_seq) - i+1 for i in prufer_seq]
-    # pretty_prufer_seq.append(1)
-    p_sum = sum(prufer_seq)
+
+    T = nx.from_prufer_sequence(prufer_seq)
+    for i, J in enumerate(reversed(branches)):
+        T.nodes[N+i]["branch"] = str(J)
+
+        T.nodes[N+i]["set"] = "\\{" + ",".join(map(str, label_set(J, N))) + "\\}"
+        T.nodes[N+i]["leaves"] = label_set(J, N)
+
+    root = max(list(T.nodes()))
+    # depth = max(nx.shortest_path_length(T, source=root).values())
+    leave_ids = range(0, N)
+
+    A: pgv.AGraph = nx.nx_agraph.to_agraph(T)
+    A.add_subgraph(leave_ids, rank='same')
+    A.layout(prog='dot', args='-y')
+
+    pos = get_tree_pos(A)
+
+    # --- NetworkX drawing section ---
+    plt.rcParams.update({
+        "text.usetex": True,
+        "text.latex.preamble": r"""\boldmath
+\usepackage[dvipsnames]{xcolor}
+\renewcommand{\familydefault}{\sfdefault}"""
+    })
+
+    fig, ax = plt.subplots(figsize=(FIG_WIDTH, FIG_HEIGHT))
+    ax.axis('off')
+
+    # Node styling
+    node_labels = {}
+    node_sizes = []
+    node_colors = []
+    node_fontsizes = []
+    for n in T.nodes():
+        if n in leave_ids:
+            node_labels[n] = str(int(n)+1)
+            node_sizes.append(300)
+            node_colors.append('white')
+            # node_fontsizes.append(20)
+            node_fontsizes.append(36)
+        else:
+            # if n in nodes_to_draw:
+            #     node_colors.append('black')
+            # else:
+            #     node_colors.append('white')
+            node_colors.append('black')
+            node_labels[n] = T.nodes[n]['set']
+            node_sizes.append(7)
+            node_fontsizes.append(16)
+        # node_sizes.append(0)
+        # node_colors.append('#ED1B23')
+        # node_fontsizes.append(30)
+        # node_labels[n] = len(T.nodes()) - n
+
+    # Draw edges
+    nx.draw_networkx_edges(T, pos, edge_color="black", ax=ax, width=3) # thin
+    # nx.draw_networkx_edges(T, pos, edge_color="black", ax=ax, width=7) # bold
+
+    # Draw nodes
+    nx.draw_networkx_nodes(
+        T, pos, ax=ax,
+        node_color=node_colors,
+        node_size=node_sizes,
+        node_shape='h',
+        # nodelist=nodes_to_draw,
+        # edgecolors='black',
+        linewidths=1,
+    )
+
+    # Draw labels
+    colors = ["#ED1B23", "#F58137", "#bf803f",
+              "#008080", "#00AEEF", "#EC008C"]
+    color_i = 0
+    for n in T.nodes():
+        if n in leave_ids:# and n in nodes_to_draw:
+            ax.text(
+                pos[n][0], pos[n][1],
+                f"${node_labels[n]}$",
+                fontsize=node_fontsizes[n],
+                ha='center',
+                va='top',
+                # color=colors[color_i]
+            )
+        # elif n in nodes_to_draw:
+        else:
+            pass
+            # t = ax.text(
+            #     pos[n][1],
+            #     f"${node_labels[n]}$",
+            #     va='center',
+            #     ha='center',
+            #     fontsize=node_fontsizes[n]
+            # )
+            # t.set_bbox(dict(facecolor='white'))
+
+        # t = ax.text(
+        #     pos[n][0]+15,
+        #     pos[n][1],
+        #     f"${node_labels[n]}$",
+        #     va='center',
+        #     ha='center',
+        #     fontsize=node_fontsizes[n]
+        #     # color=node_colors[n]
+        # )
+        color_i += 1
+
+    # Draw title
+    # ax.set_title(f"\\textbf{{{tree.name}}} [{','.join(str(x) for x in pretty_prufer_seq)}]" , fontsize=30, loc='left')
+    # ax.set_title(" ", fontsize=30)
+
+    return fig
+
+def _draw_and_save(args):
+    tree_id, branches, N, out_dir = args
+    fig = draw_tree(branches, N)
+    fig.tight_layout(pad=.5)
+    imgpath = os.path.join(out_dir, f"tree_{tree_id}.png")
+    fig.savefig(imgpath, pad_inches=.5, dpi=100)
+    plt.close(fig)
+    return imgpath
+
+
+def draw_all_trees(N: int, db_path: Path, out_dir: str, n_workers: int | None = None):
+    os.makedirs(out_dir, exist_ok=True)
+    trees = load_trees(N, db_path)
+    tasks = [(tid, list(row["branches"]), N, out_dir) for tid, row in trees.iterrows()]
+    with ProcessPoolExecutor(max_workers=n_workers) as ex:
+        for i, _ in enumerate(ex.map(_draw_and_save, tasks, chunksize=4), 1):
+            if i % 50 == 0:
+                print(f"{i}/{len(tasks)} -", str(datetime.now()))
+
+
+if __name__ == "__main__":
+    draw_all_trees(N, Path(TREE_DB_PATH), TREE_IMG_DIR)
+
+
+# if not os.path.exists(TREE_IMG_DIR):
+#     os.mkdir(TREE_IMG_DIR)
+
+# trees = query(N, TREE_DB_PATH)
+# trees["branches"] = trees["branches"].apply(ast.literal_eval)
+# trees["degrees"] = trees["degrees"].apply(ast.literal_eval)
+
+# # trees.index = range(1, trees.index.size+1)
+
+# # i_min = trees.index.min()
+# # i_max = trees.index.max()
+# # idxs = [randint(i_min, i_max) for _ in range(3)]
+# # trees = trees.loc[idxs]
+# # trees = trees.loc[[60]]
+
+# prufer_sums = []
+# prufers: List[List[int]] = []
+# # pretty_prufers: List[List[int]] = []
+
+
+# for _, tree in trees.iterrows():
+#     branches = tree["branches"]
+#     prufer_seq = branches_to_prufer_seq(N, branches)
+#         # prufer_seq = [max(prufer_seq) - i+1 for i in prufer_seq]
+#     # pretty_prufer_seq = [max(prufer_seq) - i+1 for i in prufer_seq]
+#     # pretty_prufer_seq.append(1)
+#     p_sum = sum(prufer_seq)
     
-    prufer_sums.append(p_sum)
-    prufers.append(prufer_seq)
-
-    # print(tree.name, branches, ":", pretty_prufer_seq, prufer_seq)
-
-    # print(prufer_seq_to_tree(N, prufer_seq))
-
-
-
-#     T = nx.from_prufer_sequence(prufer_seq)
-#     for i, J in enumerate(reversed(branches)):
-#         T.nodes[N+i]["branch"] = str(J)
-
-#         T.nodes[N+i]["set"] = "\\{" + ",".join(map(str, label_set(J, N))) + "\\}"
-#         # T.nodes[N+i]["set"] = "\{" + ",".join([f"x_{i}" for i in label_set(J, N)]) + "\}"
-#         T.nodes[N+i]["leaves"] = label_set(J, N)
-
-#     root = max(list(T.nodes()))
-#     depth = max(nx.shortest_path_length(T, source=root).values())
-#     leave_ids = range(0, N)
-
-#     A: pgv.AGraph = nx.nx_agraph.to_agraph(T)
-#     A.add_subgraph(leave_ids, rank='same')
-#     A.layout(prog='dot', args='-y')
-
-#     pos = get_tree_pos(A)
-
-#     # --- NetworkX drawing section ---
-#     plt.rcParams.update({
-#         "text.usetex": True,
-#         "text.latex.preamble": r"""\boldmath
-# \usepackage[dvipsnames]{xcolor}
-# \renewcommand{\familydefault}{\sfdefault}"""
-#     })
-
-#     fig, ax = plt.subplots(figsize=(FIG_WIDTH, FIG_HEIGHT))
-#     # ax.set_aspect('equal')
-#     ax.axis('off')
-
-#     # Node styling
-#     node_labels = {}
-#     node_sizes = []
-#     node_colors = []
-#     node_fontsizes = []
-#     for n in T.nodes():
-#         # if n in leave_ids:
-#         #     node_labels[n] = str(int(n)+1)
-#         #     node_sizes.append(300)
-#         #     node_colors.append('white')
-#         #     # node_fontsizes.append(20)
-#         #     node_fontsizes.append(36)
-#         # else:
-#         #     node_labels[n] = T.nodes[n]['set']
-#         #     node_sizes.append(0)
-#         #     node_colors.append('black')
-#         #     node_fontsizes.append(16)
-#         node_sizes.append(0)
-#         node_colors.append('#ED1B23')
-#         node_fontsizes.append(30)
-#         node_labels[n] = len(T.nodes()) - n
-
-#     # Draw edges
-#     nx.draw_networkx_edges(T, pos, ax=ax, width=3)
-
-#     # Draw nodes
-#     nx.draw_networkx_nodes(
-#         T, pos, ax=ax,
-#         node_color=node_colors,
-#         node_size=node_sizes,
-#         # edgecolors='black',
-#         linewidths=1,
-#     )
-
-#     # Draw labels
-#     colors = ["#ED1B23", "#F58137", "#bf803f",
-#               "#008080", "#00AEEF", "#EC008C"]
-#     color_i = 0
-#     for n in T.nodes():
-#         # if n in leave_ids:
-#         #     ax.text(
-#         #         pos[n][0], pos[n][1],
-#         #         f"${node_labels[n]}$",
-#         #         fontsize=node_fontsizes[n],
-#         #         ha='center',
-#         #         va='top',
-#         #         # color=colors[color_i]
-#         #     )
-#         # else:
-#         #     pass
-#         #     # t = ax.text(
-#         #     #     pos[n][0],
-#         #     #     pos[n][1],
-#         #     #     f"${node_labels[n]}$",
-#         #     #     va='center',
-#         #     #     ha='center',
-#         #     #     fontsize=node_fontsizes[n]
-#         #     # )
-#         #     # t.set_bbox(dict(facecolor='white'))
-
-#         t = ax.text(
-#             pos[n][0]+15,
-#             pos[n][1],
-#             f"${node_labels[n]}$",
-#             va='center',
-#             ha='center',
-#             fontsize=node_fontsizes[n]
-#             # color=node_colors[n]
-#         )
-#         color_i += 1
-
-#     # Draw title
-#     ax.set_title(f"\\textbf{{{tree.name}}} [{','.join(str(x) for x in pretty_prufer_seq)}]" , fontsize=30, loc='left')
-
-#     plt.tight_layout(pad=.5)
-#     plt.savefig(imgpath, pad_inches=.5, dpi=100)
-#     plt.close()
+#     prufer_sums.append(p_sum)
+#     prufers.append(prufer_seq)
 
 # p_sums_dict = dict((s, prufer_sums.count(s)) for s in set(prufer_sums))
 
 # print("sums:", len(set(prufer_sums)))
 # print(set(prufer_sums))
-count = 0
+# count = 0
 
-# sorted_prufers: Set[str] = set()
-prufers_dict: Dict[str, List[str]] = {}
+# # sorted_prufers: Set[str] = set()
+# prufers_dict: Dict[str, List[str]] = {}
 
-for p in prufers:
-    s = get_sorted_prufer(p)
-    if (s not in prufers_dict.keys()):
-        prufers_dict[s] = []
-    prufers_dict[s].append("".join(str(x) for x in p))
-
-
-print(len(prufers_dict.keys()), prufers_dict.keys())
+# for p in prufers:
+#     s = get_sorted_prufer(p)
+#     if (s not in prufers_dict.keys()):
+#         prufers_dict[s] = []
+#     prufers_dict[s].append("".join(str(x) for x in p))
 
 
-for s,lst in prufers_dict.items():
-    perms = ["".join(x for x in p) for p in list(set(permutations(s)))]
+# print(len(prufers_dict.keys()), prufers_dict.keys())
 
 
-    def bold(s):
-        return '\033[1m' + str(s) + '\033[0m'
-    def italic(s):
-        return '\033[3m' + str(s) + '\033[0m'
-    not_trees = []
-    for perm in perms:
-        if perm not in lst:
-            not_trees.append(perm)
-    print(italic(s[::-1]),"--", bold(len(lst)), "trees,", bold(len(not_trees)), "not trees,", bold(len(perms)), "permutations, ", "tree %:", len(lst)/len(perms))
+# for s,lst in prufers_dict.items():
+#     perms = ["".join(x for x in p) for p in list(set(permutations(s)))]
 
-    unlabeled = []
 
-    for p in lst:
-        # p = p+'1'
-        unlabeled.append(p[N:])
+#     def bold(s):
+#         return '\033[1m' + str(s) + '\033[0m'
+#     def italic(s):
+#         return '\033[3m' + str(s) + '\033[0m'
+#     not_trees = []
+#     for perm in perms:
+#         if perm not in lst:
+#             not_trees.append(perm)
+#     print(italic(s[::-1]),"--", bold(len(lst)), "trees,", bold(len(not_trees)), "not trees,", bold(len(perms)), "permutations, ", "tree %:", len(lst)/len(perms))
 
-    print("\t internal nodes:", set(unlabeled))
+#     unlabeled = []
+
+#     for p in lst:
+#         # p = p+'1'
+#         unlabeled.append(p[N:])
+
+#     print("\t internal nodes:", set(unlabeled))
     # if (s == "1222233"):
     #     for p in lst:
     #         # seq = [N+5 - int(x) for x in p]
