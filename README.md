@@ -13,7 +13,7 @@ The app is under active development.
 
 ## Background
 
-A *log-Coulomb gas* in $\Z_p$ is a system of $N$ charged particles with randomly varying locations $x_1,\dots, x_N \in \Z_p$. Its state space is $X = \Z_p^N$ and the canonical partition function takes the form
+A *log-Coulomb gas* in $\mathbb{Z}_p$ is a system of $N$ charged particles with randomly varying locations $x_1,\dots, x_N \in \mathbb{Z}_p$. Its state space is $X = \mathbb{Z}_p^N$ and the canonical partition function takes the form
 
 <!-- the energy of each state $\vec{x} = (x_1, \dots, x_N) \in X$ is defined by
 $$
@@ -22,10 +22,10 @@ $$
 where $\mathfrak{q}_i$ is the charge of the particle at $x_i$. For this system,  -->
 
 $$
-    \mathcal{Z}_N(\beta)\vcentcolon=\int\limits_{\Z_p^N}\!\prod_{1\leq i < j \leq N}\!\!\!|x_i-x_j|_p^{\mathfrak{q}_i\mathfrak{q}_j\beta}\,d\mu^N\!(\vec{x}),
+    \mathcal{Z}_N(\beta):=\int\limits_{\mathbb{Z}_p^N}\!\prod_{1\leq i < j \leq N}\!\!\!|x_i-x_j|_p^{\mathfrak{q}_i\mathfrak{q}_j\beta}\,d\mu^N\!(\vec{x}),
 $$
 
-where $\mu^N$ is the additive Haar measure on $\Z_p^N$ satisfying $\mu^N(\Z_p^N)=1$.
+where $\mu^N$ is the additive Haar measure on $\mathbb{Z}_p^N$ satisfying $\mu^N(\mathbb{Z}_p^N)=1$.
 
 In Webster 2023, it was shown that, for all $\beta$ such that $\mathcal{Z}_N(\beta)$ converges, we have
 
@@ -53,7 +53,7 @@ for each tree in $\mathcal{R}_N$ and still efficently compute $\mathcal{Z}_N(\be
 
 ### Building the tree generator (`build/main`)
 
-The C++ tree generator enumerates all phylogenetic trees up to a given N and writes them to `data/trees.db`. It requires CMake ≥ 3.20, plus `sqlite3` and `boost` installed via your system package manager. All other dependencies (`fmt`, `spdlog`, `nlohmann_json`, `SQLiteCpp`) are fetched automatically.
+The C++ tree generator enumerates all phylogenetic trees up to a given N and writes them to `data/trees.db`. It requires CMake ≥ 3.20 to build.
 
 ```sh
 # macOS
@@ -74,11 +74,11 @@ Run the generator:
 build/main <N> -d data/trees.db
 ```
 
-This populates `data/trees.db` with tables `trees1` through `treesN`. Pass `--ignore-changes` to skip the interactive prompt, or `--reset <K>` to truncate everything above leaf size K and regenerate from there.
+This populates `data/trees.db` with tables `trees1` through `treesN`. Run `build/main --help` for a list of options and how to use them. 
 
 ### Installing Dependencies for CANO.PY
 
-CANO.PY lives in [`app/`](app/) and is built on [PySide6](https://doc.qt.io/qtforpython-6/). To install, run from the repo root:
+CANO.PY is built on [PySide6](https://doc.qt.io/qtforpython-6/) and [Matplotlib](https://matplotlib.org/). To install, run from the repo root:
 
 ```sh
 python -m venv .venv
@@ -86,11 +86,11 @@ source .venv/bin/activate
 pip install -r app/requirements.txt
 ```
 
-This creates a virtual environment, activates the venv, and installs required packages.
+This creates a virtual environment, activates the environment, and installs required packages.
 
-### Running CANO.PY
+### Using CANO.PY
 
-Launch the app:
+To launch the app run:
 
 ```sh
 python -m app
