@@ -75,6 +75,10 @@ if(NOT SQLiteCpp_FOUND)
   set(SQLITECPP_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
   set(SQLITECPP_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
   FetchContent_MakeAvailable(SQLiteCpp)
+  # Apple's system sqlite3 is compiled with SQLITE_OMIT_LOAD_EXTENSION, so the
+  # corresponding symbol isn't exported. Define the macro for SQLiteCpp itself
+  # so its loadExtension() compiles as a stub instead of calling the missing fn.
+  target_compile_definitions(SQLiteCpp PRIVATE SQLITE_OMIT_LOAD_EXTENSION)
 endif()
 
 # ---------------------------------------------------------------------------
